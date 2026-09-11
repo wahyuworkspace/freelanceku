@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Freelance Tracker & Reschedule</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+        input, select, textarea { font-size: 15px !important; }
+        @media (min-width: 640px) { input, select, textarea { font-size: 13px !important; } }
+        .touch-scroll::-webkit-scrollbar { width: 4px; }
+        .touch-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen pb-12 pt-3 px-3 sm:py-8 sm:px-6">
+    <div class="max-w-4xl mx-auto space-y-4 sm:space-y-6">
+        
+        <!-- Header -->
+        <header class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-3">
+            <div class="flex items-center justify-between w-full sm:w-auto">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 bg-emerald-800 text-white rounded-xl flex items-center justify-center text-base shadow-sm">
+                        <i class="fa-solid fa-briefcase"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-base font-bold text-slate-900 leading-tight">FREELANCE TRACKER</h1>
+                        <p class="text-[11px] text-slate-500">Sheet & GCal Sync</p>
+                    </div>
+                </div>
+                <button onclick="openModalSettings()" class="sm:hidden w-8 h-8 flex items-center justify-center text-slate-500 hover:text-slate-900 rounded-lg">
+                    <i class="fa-solid fa-gear text-base"></i>
+                </button>
+            </div>
+
+            <!-- Switcher Tab -->
+            <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 w-full sm:w-auto">
+                <button id="tabNewBtn" onclick="switchMode('new')" class="flex-1 sm:flex-none py-2 px-3 bg-white text-slate-900 font-bold text-xs rounded-lg shadow-sm transition">
+                    <i class="fa-solid fa-plus mr-1"></i> Tambah Job
+                </button>
+                <button id="tabReschedBtn" onclick="switchMode('reschedule')" class="flex-1 sm:flex-none py-2 px-3 text-slate-600 hover:text-slate-900 font-bold text-xs rounded-lg transition">
+                    <i class="fa-solid fa-calendar-days mr-1"></i> Reschedule
+                </button>
+                <button onclick="openModalSettings()" class="hidden sm:flex w-8 h-8 items-center justify-center text-slate-500 hover:text-slate-800 rounded-lg ml-1">
+                    <i class="fa-solid fa-gear text-sm"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- ============================================== -->
+        <!-- MODE 1: TAMBAH JOB BARU -->
+        <!-- ============================================== -->
+        <div id="sectionNew" class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+            <div class="lg:col-span-5 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+                <div class="flex justify-between items-center">
+                    <label class="text-xs font-bold uppercase tracking-wider text-slate-500">Chat Tawaran Job</label>
+                    <button onclick="pasteFromClipboard()" class="text-xs text-emerald-700 font-bold py-1 px-2 rounded hover:bg-emerald-50 active:scale-95">
+                        <i class="fa-solid fa-paste mr-1"></i> Paste
+                    </button>
+                </div>
+                <textarea id="rawInput" rows="7" placeholder="Tempel chat tawaran job di sini..." 
+                          class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-mono text-slate-800 outline-none focus:ring-2 focus:ring-emerald-800 resize-none transition leading-relaxed"></textarea>
+                <button onclick="parseBrief()" class="w-full py-3 bg-slate-900 hover:bg-black active:scale-95 text-white font-bold text-xs rounded-xl transition shadow-sm">
+                    <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Ekstrak Data Job
+                </button>
+            </div>
+
+            <div class="lg:col-span-7 bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                <h2 class="font-bold text-slate-800 text-xs sm:text-sm flex items-center gap-2 border-b border-slate-100 pb-2.5">
+                    <i class="fa-solid fa-file-pen text-emerald-600"></i> Rincian Jadwal Baru
+                </h2>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                        <label class="text-[10px] text-slate-400 uppercase font-bold block">Pilih Tanggal</label>
+                        <input type="date" id="pickerTanggalBaru" onchange="onPickerChange('new')" class="w-full font-semibold bg-transparent outline-none mt-0.5 text-slate-900 cursor-pointer">
+                        <span id="previewTanggalBaru" class="text-[11px] font-bold text-emerald-700 block mt-1"></span>
+                    </div>
+                    <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                        <label class="text-[10px] text-slate-400 uppercase font-bold block">Vendor</label>
+                        <input type="text" id="outVendor" placeholder="Contoh: Moment Bersama" class="w-full font-semibold bg-transparent outline-none mt-0.5 text-slate-900">
+                    </div>
+                    <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                        <label class="text-[10px] text-slate-400 uppercase font-bold block">Job / Role</label>
+                        <input type="text" id="outJob" placeholder="Contoh: Foto Wisuda" class="w-full font-semibold bg-transparent outline-none mt-0.5 text-slate-900">
+                    </div>
+                    <div class="p-2.5 bg-emerald-50/70 rounded-xl border border-emerald-200">
+                        <label class="text-[10px] text-emerald-800 uppercase font-bold block">Waktu Sesi</label>
+                        <input type="text" id="outWaktu" placeholder="Contoh: 08:00 - 10:00" class="w-full font-bold text-emerald-900 bg-transparent outline-none mt-0.5">
+                    </div>
+                    <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200 sm:col-span-2">
+                        <label class="text-[10px] text-slate-400 uppercase font-bold block">Lokasi</label>
+                        <input type="text" id="outLokasi" placeholder="Contoh: UIN" class="w-full font-semibold bg-transparent outline-none mt-0.5 text-slate-900">
+                    </div>
+                </div>
+
+                <button id="btnSync" onclick="saveFreelanceJob()" class="w-full py-3.5 bg-emerald-700 hover:bg-emerald-800 active:scale-[0.99] text-white font-bold text-sm rounded-xl transition shadow-md">
+                    <i class="fa-solid fa-cloud-arrow-up mr-1"></i> Simpan ke Sheet & Google Calendar
+                </button>
+            </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- MODE 2: RESCHEDULE, EDIT & DELETE JOB -->
+        <!-- ============================================== -->
+        <div id="sectionResched" class="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm max-w-2xl mx-auto space-y-4 hidden">
+            <div class="border-b border-slate-100 pb-3 flex justify-between items-start">
+                <div>
+                    <h2 class="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                        <i class="fa-solid fa-calendar-days text-emerald-700"></i> Mode Reschedule Freelance
+                    </h2>
+                    <p class="text-[11px] text-slate-500">Pilih job terdaftar di bawah untuk reschedule atau hapus.</p>
+                </div>
+                <button onclick="loadJobs(true)" id="btnReloadJobs" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-2.5 py-1.5 rounded-lg transition">
+                    <i class="fa-solid fa-arrows-rotate mr-1"></i> Refresh
+                </button>
+            </div>
+
+            <div class="space-y-3.5">
+                <!-- Search Box -->
+                <div class="relative">
+                    <label class="text-[11px] text-slate-500 uppercase font-bold block mb-1">Cari Vendor / Job</label>
+                    <div class="relative">
+                        <input type="text" id="searchJobInput" onfocus="showAllJobsList()" oninput="onSearchJob(this.value)" autocomplete="off" placeholder="Ketik atau klik untuk lihat semua job..." 
+                               class="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-semibold outline-none focus:ring-2 focus:ring-emerald-800 text-slate-900">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-3.5 text-slate-400 text-xs"></i>
+                    </div>
+                    <!-- Dropdown List Hasil Pencarian / Semua Job -->
+                    <div id="searchResultsBox" class="absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-30 max-h-60 overflow-y-auto touch-scroll hidden">
+                    </div>
+                </div>
+
+                <!-- Info Card Job Terpilih -->
+                <div id="selectedJobCard" class="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl hidden space-y-2 text-xs">
+                    <div class="flex justify-between items-center">
+                        <span class="text-[10px] font-bold uppercase text-emerald-800 tracking-wider">Jadwal Sekarang Terdaftar:</span>
+                        <span class="text-[10px] bg-emerald-200 text-emerald-900 font-bold px-2 py-0.5 rounded">Aktif</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div><span class="text-slate-400 block text-[10px]">Vendor:</span><span id="cardVendor" class="font-bold text-slate-800">-</span></div>
+                        <div><span class="text-slate-400 block text-[10px]">Job:</span><span id="cardJob" class="font-bold text-slate-800">-</span></div>
+                        <div><span class="text-slate-400 block text-[10px]">Tanggal & Jam:</span><span id="cardWaktu" class="font-bold text-emerald-700">-</span></div>
+                        <div><span class="text-slate-400 block text-[10px]">Lokasi:</span><span id="cardLokasi" class="font-bold text-slate-800">-</span></div>
+                    </div>
+                </div>
+
+                <!-- Form Reschedule -->
+                <div id="rescheduleFormFields" class="space-y-2.5 hidden">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                            <label class="text-[10px] text-slate-400 uppercase font-bold block">Pilih Tanggal Baru</label>
+                            <input type="date" id="pickerTanggalResched" onchange="onPickerChange('resched')" class="w-full font-semibold bg-transparent outline-none mt-0.5 text-slate-900 cursor-pointer">
+                            <span id="previewTanggalResched" class="text-[11px] font-bold text-emerald-700 block mt-1"></span>
+                        </div>
+                        <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                            <label class="text-[10px] text-slate-400 uppercase font-bold block">Nama Vendor (Bisa Diedit)</label>
+                            <input type="text" id="reschedVendorName" class="w-full font-semibold bg-transparent outline-none mt-0.5 text-slate-900">
+                        </div>
+                        <div class="p-2.5 bg-emerald-50/70 rounded-xl border border-emerald-200">
+                            <label class="text-[10px] text-emerald-800 uppercase font-bold block">Waktu Baru</label>
+                            <input type="text" id="reschedWaktu" placeholder="Contoh: 15:00 - 22:00" class="w-full font-bold text-emerald-900 bg-transparent outline-none mt-0.5">
+                        </div>
+                        <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                            <label class="text-[10px] text-slate-400 uppercase font-bold block">Job / Role</label>
+                            <input type="text" id="reschedJobTitle" class="w-full font-semibold bg-transparent outline-none mt-0.5 text-slate-900">
+                        </div>
+                        <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200 sm:col-span-2">
+                            <label class="text-[10px] text-slate-400 uppercase font-bold block">Lokasi Baru</label>
+                            <input type="text" id="reschedLokasi" class="w-full font-semibold bg-transparent outline-none mt-0.5 text-slate-900">
+                        </div>
+                    </div>
+
+                    <!-- Tombol Aksi: Update & Delete -->
+                    <div class="pt-2 flex flex-col sm:flex-row gap-2">
+                        <button id="btnSubmitResched" onclick="submitReschedule()" class="flex-1 py-3.5 bg-emerald-700 hover:bg-emerald-800 active:scale-[0.99] text-white font-bold text-xs sm:text-sm rounded-xl transition shadow-md flex items-center justify-center gap-1.5">
+                            <i class="fa-solid fa-arrows-rotate"></i> Update Jadwal di Sheet & GCal
+                        </button>
+                        <button id="btnDeleteJob" onclick="confirmDeleteJob()" class="sm:w-36 py-3.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 active:scale-[0.99] font-bold text-xs sm:text-sm rounded-xl transition flex items-center justify-center gap-1.5">
+                            <i class="fa-solid fa-trash-can"></i> Hapus Job
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Sukses Alert -->
+        <div id="modalSuccessAlert" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+            <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl text-center space-y-4">
+                <div class="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto text-2xl shadow-inner">
+                    <i class="fa-solid fa-check"></i>
+                </div>
+                <div class="space-y-1">
+                    <h3 class="font-bold text-base text-slate-900" id="successAlertTitle">Tersimpan!</h3>
+                    <p class="text-xs text-slate-500 leading-relaxed" id="successAlertMsg">Jadwal berhasil diperbarui.</p>
+                </div>
+                <button onclick="closeSuccessAlert()" class="w-full py-2.5 bg-slate-900 hover:bg-black text-white font-bold text-xs rounded-xl shadow transition">
+                    Oke, Siap
+                </button>
+            </div>
+        </div>
+
+        <!-- Modal Konfirmasi Hapus -->
+        <div id="modalConfirmDelete" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+            <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl text-center space-y-4">
+                <div class="w-14 h-14 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto text-2xl shadow-inner">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+                <div class="space-y-1">
+                    <h3 class="font-bold text-base text-slate-900">Hapus Job Ini?</h3>
+                    <p class="text-xs text-slate-500 leading-relaxed" id="confirmDeleteMsg">Jadwal akan dihapus dari Google Sheets dan Google Calendar.</p>
+                </div>
+                <div class="flex gap-2 pt-1">
+                    <button onclick="closeConfirmDelete()" class="w-1/2 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition">Batal</button>
+                    <button onclick="executeDeleteJob()" class="w-1/2 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow transition">Hapus</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Setting URL -->
+        <div id="modalSettings" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+            <div class="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-3.5">
+                <div class="flex justify-between items-center border-b border-slate-100 pb-2.5">
+                    <h3 class="font-bold text-xs sm:text-sm text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-gear text-slate-600"></i> Pengaturan Apps Script URL
+                    </h3>
+                    <button onclick="closeModalSettings()" class="text-slate-400 hover:text-slate-600 w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                </div>
+                <div class="space-y-2">
+                    <label class="text-xs font-bold text-slate-600 block">Web App URL (/exec)</label>
+                    <input type="text" id="scriptUrlInput" placeholder="https://script.google.com/macros/s/.../exec" 
+                           class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono text-xs outline-none focus:ring-2 focus:ring-emerald-800">
+                </div>
+                <button onclick="saveSettings()" class="w-full py-2.5 text-xs font-bold bg-slate-900 hover:bg-black text-white rounded-xl shadow-md">
+                    Simpan Pengaturan
+                </button>
+            </div>
+        </div>
+
+        <!-- Toast -->
+        <div id="toast" class="fixed top-4 left-1/2 -translate-x-1/2 bg-slate-900/95 backdrop-blur text-white px-4 py-2 rounded-full shadow-2xl flex items-center gap-2 transition-all duration-300 -translate-y-16 opacity-0 pointer-events-none z-50 text-xs">
+            <i id="toastIcon" class="fa-solid fa-check text-emerald-400"></i>
+            <span id="toastMsg">Tersalin!</span>
+        </div>
+    </div>
+
+    <script>
+        const NAMA_BULAN_ID = [
+            "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+            "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+        ];
+
+        const MONTH_MAP = {
+            'januari': 0, 'jan': 0, 'februari': 1, 'feb': 1, 'maret': 2, 'mar': 2,
+            'april': 3, 'apr': 3, 'mei': 4, 'may': 4, 'juni': 5, 'jun': 5,
+            'juli': 6, 'jul': 6, 'agustus': 7, 'agu': 7, 'agt': 7, 'aug': 7,
+            'september': 8, 'sep': 8, 'oktober': 9, 'okt': 9, 'oct': 9,
+            'november': 10, 'nov': 10, 'desember': 11, 'des': 11, 'dec': 11
+        };
+
+        let cachedJobs = [];
+        let selectedJob = null;
+
+        function formatPickerToIndonesianDate(isoStr) {
+            if (!isoStr) return "";
+            const [y, m, d] = isoStr.split('-');
+            const monthName = NAMA_BULAN_ID[parseInt(m, 10) - 1];
+            return `${parseInt(d, 10)} ${monthName} ${y}`;
+        }
+
+        function parseFreeTextToISODate(str) {
+            if (!str) return "";
+            const p = str.trim().split(/[\s\-\/\.]+/);
+            if (p.length >= 3) {
+                const day = String(parseInt(p[0], 10)).padStart(2, '0');
+                let monthVal = p[1].toLowerCase();
+                let mIndex = 0;
+
+                if (MONTH_MAP[monthVal] !== undefined) {
+                    mIndex = MONTH_MAP[monthVal];
+                } else if (!isNaN(monthVal)) {
+                    mIndex = parseInt(monthVal, 10) - 1;
+                }
+                const month = String(mIndex + 1).padStart(2, '0');
+
+                let year = p[2];
+                if (year.length === 2) year = '20' + year;
+
+                return `${year}-${month}-${day}`;
+            }
+            return "";
+        }
+
+        function onPickerChange(mode) {
+            if (mode === 'new') {
+                const val = document.getElementById('pickerTanggalBaru').value;
+                document.getElementById('previewTanggalBaru').textContent = formatPickerToIndonesianDate(val);
+            } else {
+                const val = document.getElementById('pickerTanggalResched').value;
+                document.getElementById('previewTanggalResched').textContent = formatPickerToIndonesianDate(val);
+            }
+        }
+
+        function switchMode(mode) {
+            const isNew = mode === 'new';
+            document.getElementById('sectionNew').classList.toggle('hidden', !isNew);
+            document.getElementById('sectionResched').classList.toggle('hidden', isNew);
+
+            document.getElementById('tabNewBtn').className = isNew 
+                ? "flex-1 sm:flex-none py-2 px-3 bg-white text-slate-900 font-bold text-xs rounded-lg shadow-sm transition"
+                : "flex-1 sm:flex-none py-2 px-3 text-slate-600 hover:text-slate-900 font-bold text-xs rounded-lg transition";
+
+            document.getElementById('tabReschedBtn').className = !isNew 
+                ? "flex-1 sm:flex-none py-2 px-3 bg-white text-slate-900 font-bold text-xs rounded-lg shadow-sm transition"
+                : "flex-1 sm:flex-none py-2 px-3 text-slate-600 hover:text-slate-900 font-bold text-xs rounded-lg transition";
+
+            if (!isNew) {
+                loadJobs(false).then(() => {
+                    showAllJobsList();
+                });
+            }
+        }
+
+        async function loadJobs(showToastNotice = true) {
+            const scriptUrl = localStorage.getItem('freelance_script_url') || document.getElementById('scriptUrlInput').value.trim();
+            if (!scriptUrl) return;
+
+            const btn = document.getElementById('btnReloadJobs');
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Loading';
+
+            try {
+                const res = await fetch(scriptUrl);
+                const data = await res.json();
+                if (data && data.status === 'success' && data.jobs) {
+                    cachedJobs = data.jobs;
+                    if (showToastNotice) showToast(`Berhasil memuat ${cachedJobs.length} job`);
+                }
+            } catch (err) {
+                if (showToastNotice) showToast('Gagal memuat job');
+            } finally {
+                btn.innerHTML = '<i class="fa-solid fa-arrows-rotate mr-1"></i> Refresh';
+            }
+        }
+
+        // Tampilkan semua job tanpa perlu mengetik
+        function showAllJobsList() {
+            renderJobList(cachedJobs);
+        }
+
+        function onSearchJob(query) {
+            const q = query.trim().toLowerCase();
+            if (!q) {
+                renderJobList(cachedJobs);
+                return;
+            }
+
+            const filtered = cachedJobs.filter(j => 
+                j.vendor.toLowerCase().includes(q) || 
+                j.job.toLowerCase().includes(q) ||
+                j.lokasi.toLowerCase().includes(q)
+            );
+
+            renderJobList(filtered);
+        }
+
+        function renderJobList(list) {
+            const box = document.getElementById('searchResultsBox');
+            if (!list || list.length === 0) {
+                box.innerHTML = '<div class="p-4 text-slate-400 text-xs text-center">Belum ada job terdaftar</div>';
+                box.classList.remove('hidden');
+                return;
+            }
+
+            box.innerHTML = `
+                <div class="px-3 py-1.5 bg-slate-50 border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    Daftar Semua Job (${list.length})
+                </div>
+            ` + list.map((j, idx) => `
+                <div onclick="selectJobItemDirect(${idx})" class="p-3 hover:bg-slate-50 active:bg-slate-100 cursor-pointer border-b border-slate-100 last:border-0 transition">
+                    <div class="flex justify-between items-center">
+                        <span class="font-bold text-slate-900 text-xs">${j.vendor}</span>
+                        <span class="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-semibold">${j.job}</span>
+                    </div>
+                    <div class="text-[11px] text-slate-500 mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
+                        <span>📅 ${j.tanggal} (${j.waktu})</span>
+                        <span>📍 ${j.lokasi}</span>
+                    </div>
+                </div>
+            `).join('');
+
+            window._currentRenderedList = list;
+            box.classList.remove('hidden');
+        }
+
+        function selectJobItemDirect(index) {
+            selectedJob = window._currentRenderedList[index];
+            if (!selectedJob) return;
+
+            document.getElementById('searchJobInput').value = `${selectedJob.vendor} - ${selectedJob.job}`;
+            document.getElementById('searchResultsBox').classList.add('hidden');
+
+            const card = document.getElementById('selectedJobCard');
+            card.classList.remove('hidden');
+            document.getElementById('cardVendor').textContent = selectedJob.vendor;
+            document.getElementById('cardJob').textContent = selectedJob.job;
+            document.getElementById('cardWaktu').textContent = `${selectedJob.tanggal} (${selectedJob.waktu})`;
+            document.getElementById('cardLokasi').textContent = selectedJob.lokasi;
+
+            // Buka form reschedule
+            document.getElementById('rescheduleFormFields').classList.remove('hidden');
+
+            const iso = parseFreeTextToISODate(selectedJob.tanggal);
+            if (iso) {
+                document.getElementById('pickerTanggalResched').value = iso;
+                document.getElementById('previewTanggalResched').textContent = formatPickerToIndonesianDate(iso);
+            }
+
+            document.getElementById('reschedVendorName').value = selectedJob.vendor;
+            document.getElementById('reschedWaktu').value = selectedJob.waktu;
+            document.getElementById('reschedJobTitle').value = selectedJob.job;
+            document.getElementById('reschedLokasi').value = selectedJob.lokasi;
+
+            showToast(`Data ${selectedJob.vendor} terpilih!`);
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#searchJobInput') && !e.target.closest('#searchResultsBox')) {
+                document.getElementById('searchResultsBox').classList.add('hidden');
+            }
+        });
+
+        function parseBrief() {
+            const raw = document.getElementById('rawInput').value.trim();
+            if (!raw) return showToast('Tempel brief job dulu!');
+
+            const tglMatch = raw.match(/(?:Tanggal|Tgl|Date)\s*:\s*(.+)/i);
+            const vendorMatch = raw.match(/(?:Vendor|EO|Klien|Client)\s*:\s*(.+)/i);
+            const jobMatch = raw.match(/(?:Job|Role|Paket|Acara)\s*:\s*(.+)/i);
+            const waktuMatch = raw.match(/(?:Waktu|Jam|Time)\s*:\s*(.+)/i);
+            const lokasiMatch = raw.match(/(?:Lokasi|Tempat|Loc)\s*:\s*(.+)/i);
+
+            if (tglMatch || vendorMatch) {
+                if (tglMatch) {
+                    const iso = parseFreeTextToISODate(tglMatch[1].trim());
+                    if (iso) {
+                        document.getElementById('pickerTanggalBaru').value = iso;
+                        document.getElementById('previewTanggalBaru').textContent = formatPickerToIndonesianDate(iso);
+                    }
+                }
+                if (vendorMatch) document.getElementById('outVendor').value = vendorMatch[1].trim();
+                if (jobMatch) document.getElementById('outJob').value = jobMatch[1].trim();
+                if (waktuMatch) document.getElementById('outWaktu').value = waktuMatch[1].trim();
+                if (lokasiMatch) document.getElementById('outLokasi').value = lokasiMatch[1].trim();
+                return showToast('Data berhasil diekstrak!');
+            }
+
+            const lines = raw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            let detectedTanggal = "";
+            let detectedWaktu = "";
+            let otherLines = [];
+
+            const monthsRegex = /(?:januari|februari|maret|april|mei|juni|juli|agustus|september|oktober|november|desember|jan|feb|mar|apr|may|jun|jul|aug|agt|agu|sep|oct|okt|nov|dec|des)/i;
+            const timeRegex = /\b\d{1,2}[:.]\d{2}\s*(?:-\s*\d{1,2}[:.]\d{2})?\b/;
+
+            for (let line of lines) {
+                if (timeRegex.test(line) && !monthsRegex.test(line) && !detectedWaktu) {
+                    detectedWaktu = line.replace('.', ':');
+                    continue;
+                }
+                if ((monthsRegex.test(line) || /\b\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}\b/.test(line)) && !detectedTanggal) {
+                    detectedTanggal = line;
+                    continue;
+                }
+                otherLines.push(line);
+            }
+
+            if (detectedTanggal) {
+                const iso = parseFreeTextToISODate(detectedTanggal);
+                if (iso) {
+                    document.getElementById('pickerTanggalBaru').value = iso;
+                    document.getElementById('previewTanggalBaru').textContent = formatPickerToIndonesianDate(iso);
+                }
+            }
+            if (detectedWaktu) document.getElementById('outWaktu').value = detectedWaktu;
+
+            if (otherLines.length > 0) document.getElementById('outVendor').value = otherLines[0];
+            if (otherLines.length > 1) document.getElementById('outJob').value = otherLines[1];
+            if (otherLines.length > 2) document.getElementById('outLokasi').value = otherLines.slice(2).join(', ');
+
+            showToast('Data berhasil diekstrak!');
+        }
+
+        async function saveFreelanceJob() {
+            const scriptUrl = localStorage.getItem('freelance_script_url') || document.getElementById('scriptUrlInput').value.trim();
+            if (!scriptUrl) return openModalSettings();
+
+            const isoDate = document.getElementById('pickerTanggalBaru').value;
+            if (!isoDate) return alert('Pilih tanggal job terlebih dahulu!');
+            
+            const tanggalFormatted = formatPickerToIndonesianDate(isoDate);
+            const vendor = document.getElementById('outVendor').value.trim();
+            const job = document.getElementById('outJob').value.trim();
+            const waktu = document.getElementById('outWaktu').value.trim();
+            const lokasi = document.getElementById('outLokasi').value.trim();
+
+            if (!vendor) return alert('Nama Vendor wajib diisi!');
+
+            const btn = document.getElementById('btnSync');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Menyimpan...';
+
+            try {
+                await fetch(scriptUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: "new_job",
+                        tanggal: tanggalFormatted,
+                        isoDate: isoDate,
+                        vendor: vendor,
+                        job: job,
+                        waktu: waktu,
+                        lokasi: lokasi
+                    })
+                });
+                showSuccessAlert('Tersimpan! 🎉', `Job dari ${vendor} (${job}) berhasil dicatat & masuk ke Google Calendar.`);
+                loadJobs(false);
+            } catch (err) {
+                showToast('Gagal menyimpan');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up mr-1"></i> Simpan ke Sheet & Google Calendar';
+            }
+        }
+
+        async function submitReschedule() {
+            const scriptUrl = localStorage.getItem('freelance_script_url') || document.getElementById('scriptUrlInput').value.trim();
+            if (!scriptUrl) return openModalSettings();
+            if (!selectedJob) return alert('Pilih job yang ingin di-reschedule terlebih dahulu!');
+
+            const isoDateBaru = document.getElementById('pickerTanggalResched').value;
+            if (!isoDateBaru) return alert('Pilih tanggal baru terlebih dahulu!');
+
+            const tanggalBaruFormatted = formatPickerToIndonesianDate(isoDateBaru);
+            const vendorBaru = document.getElementById('reschedVendorName').value.trim();
+            const waktuBaru = document.getElementById('reschedWaktu').value.trim();
+            const jobBaru = document.getElementById('reschedJobTitle').value.trim();
+            const lokasiBaru = document.getElementById('reschedLokasi').value.trim();
+
+            if (!vendorBaru || !waktuBaru) return alert('Nama Vendor dan Waktu Baru wajib diisi!');
+
+            const btn = document.getElementById('btnSubmitResched');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Mengupdate...';
+
+            try {
+                await fetch(scriptUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: "reschedule",
+                        originalVendor: selectedJob.vendor,
+                        originalJob: selectedJob.job,
+                        vendorBaru: vendorBaru,
+                        tanggalBaru: tanggalBaruFormatted,
+                        isoDateBaru: isoDateBaru,
+                        waktuBaru: waktuBaru,
+                        jobBaru: jobBaru,
+                        lokasiBaru: lokasiBaru
+                    })
+                });
+                showSuccessAlert('Reschedule Berhasil! 🔄', `Jadwal ${vendorBaru} berhasil diperbarui di Spreadsheet & Google Calendar.`);
+                document.getElementById('rescheduleFormFields').classList.add('hidden');
+                document.getElementById('selectedJobCard').classList.add('hidden');
+                document.getElementById('searchJobInput').value = '';
+                loadJobs(false);
+            } catch (err) {
+                showToast('Gagal update reschedule');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-arrows-rotate mr-1"></i> Update Jadwal di Sheet & GCal';
+            }
+        }
+
+        function confirmDeleteJob() {
+            if (!selectedJob) return;
+            document.getElementById('confirmDeleteMsg').textContent = `Hapus job "${selectedJob.vendor} - ${selectedJob.job}" (${selectedJob.tanggal}) dari Spreadsheet dan Kalender?`;
+            document.getElementById('modalConfirmDelete').classList.remove('hidden');
+        }
+
+        function closeConfirmDelete() {
+            document.getElementById('modalConfirmDelete').classList.add('hidden');
+        }
+
+        async function executeDeleteJob() {
+            closeConfirmDelete();
+            const scriptUrl = localStorage.getItem('freelance_script_url') || document.getElementById('scriptUrlInput').value.trim();
+            if (!scriptUrl || !selectedJob) return;
+
+            const btn = document.getElementById('btnDeleteJob');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menghapus...';
+
+            try {
+                await fetch(scriptUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: "delete_job",
+                        vendor: selectedJob.vendor,
+                        job: selectedJob.job
+                    })
+                });
+
+                showSuccessAlert('Job Berhasil Dihapus! 🗑️', `Data ${selectedJob.vendor} telah dihapus dari Spreadsheet & Google Calendar.`);
+                document.getElementById('rescheduleFormFields').classList.add('hidden');
+                document.getElementById('selectedJobCard').classList.add('hidden');
+                document.getElementById('searchJobInput').value = '';
+                selectedJob = null;
+                loadJobs(false);
+            } catch (err) {
+                showToast('Gagal menghapus job');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-trash-can"></i> Hapus Job';
+            }
+        }
+
+        async function pasteFromClipboard() {
+            try {
+                const text = await navigator.clipboard.readText();
+                document.getElementById('rawInput').value = text;
+                parseBrief();
+            } catch (err) {
+                showToast('Tempel manual di kotak teks');
+            }
+        }
+
+        function showSuccessAlert(title, msg) {
+            document.getElementById('successAlertTitle').textContent = title;
+            document.getElementById('successAlertMsg').textContent = msg;
+            document.getElementById('modalSuccessAlert').classList.remove('hidden');
+        }
+        function closeSuccessAlert() { document.getElementById('modalSuccessAlert').classList.add('hidden'); }
+
+        function openModalSettings() { document.getElementById('modalSettings').classList.remove('hidden'); }
+        function closeModalSettings() { document.getElementById('modalSettings').classList.add('hidden'); }
+        function saveSettings() {
+            const url = document.getElementById('scriptUrlInput').value.trim();
+            localStorage.setItem('freelance_script_url', url);
+            closeModalSettings();
+            showToast('URL berhasil disimpan!');
+            loadJobs(false);
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            document.getElementById('toastMsg').textContent = msg;
+            t.classList.remove('-translate-y-16', 'opacity-0');
+            setTimeout(() => t.classList.add('-translate-y-16', 'opacity-0'), 3000);
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const saved = localStorage.getItem('freelance_script_url');
+            if (saved) {
+                document.getElementById('scriptUrlInput').value = saved;
+                loadJobs(false);
+            }
+        });
+    </script>
+</body>
+</html>
