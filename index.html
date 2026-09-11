@@ -248,6 +248,12 @@
     </div>
 
     <script>
+        // =========================================================================
+        // TEMPELKAN URL APPS SCRIPT FREELANCE KAMU DI BAWAH INI SUPAYA TERKUNCI MATI
+        // =========================================================================
+        const DEFAULT_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwSfRt-2sHEpfXNXHAxXwrUwVXPlGoSsX0J1xN0BMDYlBv1x8yUUWVl83pKHhXBAm-cVg/exec";
+        // =========================================================================
+
         const NAMA_BULAN_ID = [
             "Januari", "Februari", "Maret", "April", "Mei", "Juni",
             "Juli", "Agustus", "September", "Oktober", "November", "Desember"
@@ -263,6 +269,10 @@
 
         let cachedJobs = [];
         let selectedJob = null;
+
+        function getActiveScriptUrl() {
+            return localStorage.getItem('freelance_script_url') || DEFAULT_SCRIPT_URL;
+        }
 
         function formatPickerToIndonesianDate(isoStr) {
             if (!isoStr) return "";
@@ -325,8 +335,8 @@
         }
 
         async function loadJobs(showToastNotice = true) {
-            const scriptUrl = localStorage.getItem('freelance_script_url') || document.getElementById('scriptUrlInput').value.trim();
-            if (!scriptUrl) return;
+            const scriptUrl = getActiveScriptUrl();
+            if (!scriptUrl || scriptUrl.includes('CONTOH_GANTI')) return;
 
             const btn = document.getElementById('btnReloadJobs');
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Loading';
@@ -345,7 +355,6 @@
             }
         }
 
-        // Tampilkan semua job tanpa perlu mengetik
         function showAllJobsList() {
             renderJobList(cachedJobs);
         }
@@ -409,7 +418,6 @@
             document.getElementById('cardWaktu').textContent = `${selectedJob.tanggal} (${selectedJob.waktu})`;
             document.getElementById('cardLokasi').textContent = selectedJob.lokasi;
 
-            // Buka form reschedule
             document.getElementById('rescheduleFormFields').classList.remove('hidden');
 
             const iso = parseFreeTextToISODate(selectedJob.tanggal);
@@ -494,8 +502,8 @@
         }
 
         async function saveFreelanceJob() {
-            const scriptUrl = localStorage.getItem('freelance_script_url') || document.getElementById('scriptUrlInput').value.trim();
-            if (!scriptUrl) return openModalSettings();
+            const scriptUrl = getActiveScriptUrl();
+            if (!scriptUrl || scriptUrl.includes('CONTOH_GANTI')) return openModalSettings();
 
             const isoDate = document.getElementById('pickerTanggalBaru').value;
             if (!isoDate) return alert('Pilih tanggal job terlebih dahulu!');
@@ -538,8 +546,8 @@
         }
 
         async function submitReschedule() {
-            const scriptUrl = localStorage.getItem('freelance_script_url') || document.getElementById('scriptUrlInput').value.trim();
-            if (!scriptUrl) return openModalSettings();
+            const scriptUrl = getActiveScriptUrl();
+            if (!scriptUrl || scriptUrl.includes('CONTOH_GANTI')) return openModalSettings();
             if (!selectedJob) return alert('Pilih job yang ingin di-reschedule terlebih dahulu!');
 
             const isoDateBaru = document.getElementById('pickerTanggalResched').value;
@@ -599,7 +607,7 @@
 
         async function executeDeleteJob() {
             closeConfirmDelete();
-            const scriptUrl = localStorage.getItem('freelance_script_url') || document.getElementById('scriptUrlInput').value.trim();
+            const scriptUrl = getActiveScriptUrl();
             if (!scriptUrl || !selectedJob) return;
 
             const btn = document.getElementById('btnDeleteJob');
@@ -628,7 +636,7 @@
                 showToast('Gagal menghapus job');
             } finally {
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fa-solid fa-trash-can"></i> Hapus Job';
+                btn.innerHTML = '<i class="fa-solid fa-trash-can mr-1"></i> Hapus Job';
             }
         }
 
@@ -667,9 +675,9 @@
         }
 
         window.addEventListener('DOMContentLoaded', () => {
-            const saved = localStorage.getItem('freelance_script_url');
-            if (saved) {
-                document.getElementById('scriptUrlInput').value = saved;
+            const activeUrl = getActiveScriptUrl();
+            document.getElementById('scriptUrlInput').value = activeUrl;
+            if (activeUrl && !activeUrl.includes('CONTOH_GANTI')) {
                 loadJobs(false);
             }
         });
