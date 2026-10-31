@@ -5,19 +5,69 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Jadwal Freelance</title>
 
-    <!-- Konfigurasi PWA & iOS Safari Standalone (Menghilangkan Bar Website) -->
+    <!-- Konfigurasi PWA & iOS Safari Standalone (Menghilangkan Bar & Toolbar Safari) -->
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="Jadwal Freelance">
+    <meta name="apple-touch-fullscreen" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Freelance">
     <meta name="mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#f8fafc">
+    <meta name="theme-color" content="#181d26">
 
-    <!-- App Icon untuk iOS Homescreen (Data URI SVG) -->
-    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='120' fill='%230f172a'/%3E%3Cpath d='M384 160h-48v-32c0-35.3-28.7-64-64-64h-32c-35.3 0-64 28.7-64 64v32H128c-35.3 0-64 28.7-64 64v192c0 35.3 28.7 64 64 64h256c35.3 0 64-28.7 64-64V224c0-35.3-28.7-64-64-64zm-160-32c0-8.8 7.2-16 16-16h32c8.8 0 16 7.2 16 16v32h-64v-32zm192 288c0 8.8-7.2 16-16 16H128c-8.8 0-16-7.2-16-16V256h80v16c0 8.8 7.2 16 16 16h96c8.8 0 16-7.2 16-16v-16h80v160z' fill='%2310b981'/%3E%3C/svg%3E">
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='120' fill='%230f172a'/%3E%3Cpath d='M384 160h-48v-32c0-35.3-28.7-64-64-64h-32c-35.3 0-64 28.7-64 64v32H128c-35.3 0-64 28.7-64 64v192c0 35.3 28.7 64 64 64h256c35.3 0 64-28.7 64-64V224c0-35.3-28.7-64-64-64zm-160-32c0-8.8 7.2-16 16-16h32c8.8 0 16 7.2 16 16v32h-64v-32zm192 288c0 8.8-7.2 16-16 16H128c-8.8 0-16-7.2-16-16V256h80v16c0 8.8 7.2 16 16 16h96c8.8 0 16-7.2 16-16v-16h80v160z' fill='%2310b981'/%3E%3C/svg%3E">
+    <!-- App Icon Khusus iOS Homescreen (Hi-Res PNG Canvas Generator) -->
+    <link rel="apple-touch-icon" id="dynamicAppleIcon" href="">
+    <link rel="icon" id="dynamicFavicon" href="">
 
-    <!-- Web App Manifest Inline -->
-    <link rel="manifest" href='data:application/manifest+json,{"name":"Jadwal Freelance","short_name":"Freelance","start_url":".","display":"standalone","background_color":"#f8fafc","theme_color":"#f8fafc","icons":[{"src":"data:image/svg+xml,%3Csvg xmlns=\x22http://www.w3.org/2000/svg\x22 viewBox=\x220 0 512 512\x22%3E%3Crect width=\x22512\x22 height=\x22512\x22 rx=\x22120\x22 fill=\x22%230f172a\x22/%3E%3Cpath d=\x22M384 160h-48v-32c0-35.3-28.7-64-64-64h-32c-35.3 0-64 28.7-64 64v32H128c-35.3 0-64 28.7-64 64v192c0 35.3 28.7 64 64 64h256c35.3 0 64-28.7 64-64V224c0-35.3-28.7-64-64-64zm-160-32c0-8.8 7.2-16 16-16h32c8.8 0 16 7.2 16 16v32h-64v-32zm192 288c0 8.8-7.2 16-16 16H128c-8.8 0-16-7.2-16-16V256h80v16c0 8.8 7.2 16 16 16h96c8.8 0 16-7.2 16-16v-16h80v160z\x22 fill=\x22%2310b981\x22/%3E%3C/svg%3E","sizes":"512x512","type":"image/svg+xml"}]}'>
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="data:application/manifest+json;charset=utf-8,%7B%22name%22%3A%22Freelance%20Tracker%22%2C%22short_name%22%3A%22Freelance%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23181d26%22%2C%22theme_color%22%3A%22%23181d26%22%7D">
+
+    <!-- Standalone Enforcer: Mencegah iOS Safari menampilkan Toolbar -->
+    <script>
+        // Buat icon PNG langsung di memori perangkat agar iOS Homescreen tidak menampilkan icon Safari default
+        (function() {
+            try {
+                const canvas = document.createElement('canvas');
+                canvas.width = 180;
+                canvas.height = 180;
+                const ctx = canvas.getContext('2d');
+                
+                // Background Gelap Rounded
+                ctx.fillStyle = '#0f172a';
+                ctx.fillRect(0, 0, 180, 180);
+                
+                // Aksen Badge Hijau Emerald
+                ctx.fillStyle = '#10b981';
+                ctx.beginPath();
+                ctx.roundRect ? ctx.roundRect(40, 50, 100, 75, 18) : ctx.rect(40, 50, 100, 75);
+                ctx.fill();
+
+                // Gagang Koper
+                ctx.strokeStyle = '#34d399';
+                ctx.lineWidth = 10;
+                ctx.beginPath();
+                ctx.roundRect ? ctx.roundRect(65, 32, 50, 30, 8) : ctx.rect(65, 32, 50, 30);
+                ctx.stroke();
+
+                const iconUrl = canvas.toDataURL('image/png');
+                document.getElementById('dynamicAppleIcon')?.setAttribute('href', iconUrl);
+                document.getElementById('dynamicFavicon')?.setAttribute('href', iconUrl);
+            } catch(e) {}
+        })();
+
+        // Mencegah navigasi internal melempar kembali ke jendela browser Safari
+        if (("standalone" in window.navigator) && window.navigator.standalone) {
+            var noddy, remotes = false;
+            document.addEventListener('click', function(event) {
+                noddy = event.target;
+                while (noddy.nodeName !== "A" && noddy.nodeName !== "HTML") {
+                    noddy = noddy.parentNode;
+                }
+                if ('href' in noddy && noddy.href.indexOf('http') !== -1 && (noddy.href.indexOf(document.location.host) !== -1 || remotes)) {
+                    event.preventDefault();
+                    document.location.href = noddy.href;
+                }
+            }, false);
+        }
+    </script>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
