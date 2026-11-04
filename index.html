@@ -632,7 +632,9 @@
         <span id="toastMsg">Tersalin!</span>
     </div>
 
-    <!-- JAVASCRIPT ENGINE -->
+    <!-- ============================================== -->
+    <!-- LOGIKA JAVASCRIPT GABUNGAN LENGKAP & TOLERAN   -->
+    <!-- ============================================== -->
     <script>
         const DEFAULT_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwSfRt-2sHEpfXNXHAxXwrUwVXPlGoSsX0J1xN0BMDYlBv1x8yUUWVl83pKHhXBAm-cVg/exec";
 
@@ -653,11 +655,13 @@
         let selectedJob = null;
         let isShowAllJobs = false;
 
+        // Filter State
         let activeFilterYear = 'all';
         let activeFilterMonth = 'all';
         let activeFilterWeek = 'all';
         let activeFilterStatus = 'all';
 
+        // Calendar View State
         let currentListViewMode = 'list';
         let calCurrentYear = new Date().getFullYear();
         let calCurrentMonth = new Date().getMonth();
@@ -667,6 +671,9 @@
             return localStorage.getItem('freelance_script_url') || DEFAULT_SCRIPT_URL;
         }
 
+        // =========================================================================
+        // SWITCH VIEW MODE (LIST VS KALENDER)
+        // =========================================================================
         function switchListViewMode(view) {
             currentListViewMode = view;
             const isList = view === 'list';
@@ -688,6 +695,9 @@
             }
         }
 
+        // =========================================================================
+        // GOOGLE CALENDAR ENGINE INTERAKTIF
+        // =========================================================================
         function shiftCalendarMonth(direction) {
             calCurrentMonth += direction;
             if (calCurrentMonth < 0) {
@@ -870,50 +880,121 @@
             }
         }
 
-        function switchMode(mode) {
-            const isNew = mode === 'new';
-            const isList = mode === 'list';
-            const isResched = mode === 'reschedule';
-            const isProfile = mode === 'profile';
+        // =========================================================================
+        // PARSER TANGGAL MULTI-FORMAT TOLERAN
+        // =========================================================================
+        function formatPickerToIndonesianDate(isoStr) {
+            if (!isoStr) return "";
+            const [y, m, d] = isoStr.split('-');
+            const monthName = NAMA_BULAN_ID[parseInt(m, 10) - 1];
+            return `${parseInt(d, 10)} ${monthName} ${y}`;
+        }
 
-            const secNew = document.getElementById('sectionNew');
-            const secList = document.getElementById('sectionList');
-            const secResched = document.getElementById('sectionResched');
-            const secProfile = document.getElementById('sectionProfile');
+        function parseFreeTextToISODate(str) {
+            if (!str) return "";
+            if (str instanceof Date && !isNaN(str.getTime())) {
+                const y = str.getFullYear();
+                const m = String(str.getMonth() + 1).padStart(2, '0');
+                const d = String(str.getDate()).padStart(2, '0');
+                return `${y}-${m}-${d}`;
+            }
 
-            if (secNew) secNew.classList.toggle('hidden', !isNew);
-            if (secList) secList.classList.toggle('hidden', !isList);
-            if (secResched) secResched.classList.toggle('hidden', !isResched);
-            if (secProfile) secProfile.classList.toggle('hidden', !isProfile);
+            const s = String(str).trim();
+            if (!s) return "";
 
-            updateNavButton('navListBtn', isList);
-            updateNavButton('navNewBtn', isNew);
-            updateNavButton('navReschedBtn', isResched);
-            updateNavButton('navProfileBtn', isProfile);
+            // 1. Format ISO YYYY-MM-DD atau Timestamp
+            const isoMatch = s.match(/\b(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})\b/);
+            if (isoMatch) {
+                const y = isoMatch[1];
+                const m = String(isoMatch[2]).padStart(2, '0');
+                const d = String(isoMatch[3]).padStart(2, '0');
+                return `${y}-${m}-${d}`;
+            }
 
-            if (isList) {
-                if (currentListViewMode === 'calendar') {
-                    renderGCalendar();
-                } else {
-                    renderFilteredJobs();
+            // 2. Format Teks Indonesia (7 November 2026, 07 Nov 2026)
+            const indoMatch = s.match(/(\d{1,2})\s+([a-zA-Z]+)\s+(\d{4})/);
+            if (indoMatch) {
+                const d = String(indoMatch[1]).padStart(2, '0');
+                const mKey = indoMatch[2].toLowerCase().trim();
+                const mIdx = MONTH_MAP[mKey] !== undefined ? MONTH_MAP[mKey] : 0;
+                const m = String(mIdx + 1).padStart(2, '0');
+                const y = indoMatch[3];
+                return `${y}-${m}-${d}`;
+            }
+
+            // 3. Format DD/MM/YYYY atau DD-MM-YYYY
+            const dmyMatch = s.match(/\b(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{2,4})\b/);
+            if (dmyMatch) {
+                const d = String(dmyMatch[1]).padStart(2, '0');
+                const m = String(dmyMatch[2]).padStart(2, '0');
+                let y = dmyMatch[3];
+                if (y.length === 2) y = '20' + y;
+                return `${y}-${m}-${d}`;
+            }
+
+            // Fallback split bebas
+            const p = s.split(/[\s\-\/\.]+/).filter(Boolean);
+            if (p.length >= 3) {
+                let d = parseInt(p[0], 10);
+                let mVal = p[1].toLowerCase();
+                let mIdx = 0;
+                if (MONTH_MAP[mVal] !== undefined) {
+                    mIdx = MONTH_MAP[mVal];
+                } else if (!isNaN(parseInt(mVal, 10))) {
+                    mIdx = parseInt(mVal, 10) - 1;
                 }
-            } else if (isResched) {
-                showAllJobsList();
-            } else if (isProfile) {
-                renderProfileStats();
+                let y = p[2];
+                if (y.length === 2) y = '20' + y;
+                return `${y}-${String(mIdx + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
             }
+
+            return "";
         }
 
-        function updateNavButton(btnId, isActive) {
-            const btn = document.getElementById(btnId);
-            if (!btn) return;
-            if (isActive) {
-                btn.className = "flex flex-col items-center justify-center py-1.5 rounded-xl text-slate-900 font-bold bg-slate-100 transition active:scale-90";
+        function getJobDateDetails(job) {
+            const rawTgl = job.tanggal || job.date || "";
+            let iso = job.isoDate ? String(job.isoDate).trim() : parseFreeTextToISODate(rawTgl);
+
+            if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+                iso = parseFreeTextToISODate(rawTgl);
+            }
+
+            let year = 2026, month = 10, day = 1;
+            if (iso && iso.includes('-')) {
+                const parts = iso.split('-');
+                year = parseInt(parts[0], 10);
+                month = parseInt(parts[1], 10) - 1;
+                day = parseInt(parts[2], 10);
+            }
+
+            const week = Math.min(5, Math.ceil(day / 7));
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const jobDate = new Date(year, month, day, 0, 0, 0);
+
+            let status = 'upcoming';
+            if (jobDate.getTime() === today.getTime()) {
+                status = 'today';
+            } else if (jobDate.getTime() < today.getTime()) {
+                status = 'past';
+            }
+
+            return { year, month, day, week, status, isoDate: iso };
+        }
+
+        function onPickerChange(mode) {
+            if (mode === 'new') {
+                const val = document.getElementById('pickerTanggalBaru').value;
+                document.getElementById('previewTanggalBaru').textContent = formatPickerToIndonesianDate(val);
             } else {
-                btn.className = "flex flex-col items-center justify-center py-1.5 rounded-xl text-slate-400 font-semibold hover:text-slate-800 transition active:scale-90";
+                const val = document.getElementById('pickerTanggalResched').value;
+                document.getElementById('previewTanggalResched').textContent = formatPickerToIndonesianDate(val);
             }
         }
 
+        // =========================================================================
+        // LOAD DATA DARI GOOGLE APPS SCRIPT
+        // =========================================================================
         async function loadJobs(showToastNotice = true) {
             const scriptUrl = getActiveScriptUrl();
             if (!scriptUrl || scriptUrl.includes('CONTOH_GANTI')) return;
@@ -943,6 +1024,7 @@
                 if (loadedList.length > 0) {
                     cachedJobs = loadedList.map((j, idx) => {
                         if (!j.rowIndex) j.rowIndex = idx + 2;
+                        j.isoDate = parseFreeTextToISODate(j.isoDate || j.tanggal || j.date || '');
                         return j;
                     });
                     if (showToastNotice) showToast(`Tersinkron: ${cachedJobs.length} job`);
@@ -962,99 +1044,9 @@
             }
         }
 
-        function formatPickerToIndonesianDate(isoStr) {
-            if (!isoStr) return "";
-            const [y, m, d] = isoStr.split('-');
-            const monthName = NAMA_BULAN_ID[parseInt(m, 10) - 1];
-            return `${parseInt(d, 10)} ${monthName} ${y}`;
-        }
-
-        function parseFreeTextToISODate(str) {
-            if (!str) return "";
-            const s = String(str).trim();
-            
-            const isoM = s.match(/\b(\d{4})-(\d{1,2})-(\d{1,2})\b/);
-            if (isoM) {
-                return `${isoM[1]}-${String(isoM[2]).padStart(2, '0')}-${String(isoM[3]).padStart(2, '0')}`;
-            }
-
-            const indoM = s.match(/(\d{1,2})\s+([a-zA-Z]+)\s+(\d{4})/);
-            if (indoM) {
-                const day = String(indoM[1]).padStart(2, '0');
-                const mKey = indoM[2].toLowerCase();
-                const mIndex = MONTH_MAP[mKey] !== undefined ? MONTH_MAP[mKey] : 0;
-                const month = String(mIndex + 1).padStart(2, '0');
-                const year = indoM[3];
-                return `${year}-${month}-${day}`;
-            }
-
-            const p = s.split(/[\s\-\/\.]+/);
-            if (p.length >= 3) {
-                const day = String(parseInt(p[0], 10)).padStart(2, '0');
-                let monthVal = p[1].toLowerCase();
-                let mIndex = 0;
-
-                if (MONTH_MAP[monthVal] !== undefined) {
-                    mIndex = MONTH_MAP[monthVal];
-                } else if (!isNaN(monthVal)) {
-                    mIndex = parseInt(monthVal, 10) - 1;
-                }
-                const month = String(mIndex + 1).padStart(2, '0');
-                let year = p[2];
-                if (year.length === 2) year = '20' + year;
-
-                return `${year}-${month}-${day}`;
-            }
-            return "";
-        }
-
-        function onPickerChange(mode) {
-            if (mode === 'new') {
-                const val = document.getElementById('pickerTanggalBaru').value;
-                document.getElementById('previewTanggalBaru').textContent = formatPickerToIndonesianDate(val);
-            } else {
-                const val = document.getElementById('pickerTanggalResched').value;
-                document.getElementById('previewTanggalResched').textContent = formatPickerToIndonesianDate(val);
-            }
-        }
-
-        function getJobDateDetails(job) {
-            const rawTgl = String(job.tanggal || "").trim();
-            let iso = job.isoDate || parseFreeTextToISODate(rawTgl);
-            let year = 2026;
-            let month = 0;
-            let day = 1;
-
-            if (iso && iso.includes('-')) {
-                const parts = iso.split('-');
-                year = Number(parts[0]);
-                month = Number(parts[1]) - 1;
-                day = Number(parts[2]);
-            } else if (rawTgl.includes('T') && rawTgl.includes('-')) {
-                const dObj = new Date(rawTgl);
-                if (!isNaN(dObj.getTime())) {
-                    year = dObj.getFullYear();
-                    month = dObj.getMonth();
-                    day = dObj.getDate();
-                    iso = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-                }
-            }
-
-            const week = Math.min(5, Math.ceil(day / 7));
-            const today = new Date();
-            today.setHours(0,0,0,0);
-            const jobDate = new Date(year, month, day);
-
-            let status = 'upcoming';
-            if (jobDate.getTime() === today.getTime()) {
-                status = 'today';
-            } else if (jobDate.getTime() < today.getTime()) {
-                status = 'past';
-            }
-
-            return { year, month, day, week, status, isoDate: iso };
-        }
-
+        // =========================================================================
+        // FILTER & HERO STATS
+        // =========================================================================
         function updateHeroCardSummary() {
             let upcoming = 0;
             let completed = 0;
@@ -1176,6 +1168,9 @@
             renderFilteredJobs();
         }
 
+        // =========================================================================
+        // RENDER LIST JOB
+        // =========================================================================
         function renderFilteredJobs() {
             const container = document.getElementById('jobListContainer');
             const searchKeyword = (document.getElementById('searchFilterInput')?.value || '').trim().toLowerCase();
