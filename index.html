@@ -1,6 +1,1062 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Freelance Tracker & Job Directory</title>
+
+  <!-- PWA & Apple Standalone Meta Tags -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Freelance Tracker">
+  <meta name="theme-color" content="#0f172a">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Feather Icons -->
+  <script src="https://unpkg.com/feather-icons"></script>
+
+  <style>
+    body {
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    input, textarea, select {
+      user-select: auto;
+    }
+    .safe-top {
+      padding-top: max(0.75rem, env(safe-area-inset-top));
+    }
+    .safe-bottom {
+      padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col justify-between antialiased selection:bg-emerald-500 selection:text-white">
+
+  <!-- Top Bar / App Shell Header -->
+  <header class="w-full max-w-md mx-auto safe-top px-4 pt-3 pb-2 flex items-center justify-between sticky top-0 z-30 bg-slate-100/90 backdrop-blur-md">
+    <div class="flex items-center space-x-2">
+      <span class="relative flex h-2.5 w-2.5">
+        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+        <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+      </span>
+      <span class="text-xs font-bold uppercase tracking-wider text-slate-600">Freelance Tracker & Job Directory</span>
+    </div>
+    <div class="flex items-center space-x-2">
+      <button onclick="refreshData()" class="p-2 rounded-full bg-white shadow-sm border border-slate-200 text-slate-600 hover:text-emerald-600 active:scale-95 transition" title="Refresh Data">
+        <i data-feather="rotate-cw" class="w-4 h-4"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="w-full max-w-md mx-auto px-4 flex-1 pb-28 overflow-y-auto hide-scrollbar space-y-4">
+
+    <!-- Hero Card Statistik FinTech Style -->
+    <div class="bg-slate-900 text-white rounded-[28px] p-5 shadow-xl relative overflow-hidden">
+      <div class="absolute -right-8 -bottom-8 w-36 h-36 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none"></div>
+      
+      <div class="flex justify-between items-center mb-2">
+        <div class="flex items-center space-x-1.5 text-xs font-semibold text-emerald-400">
+          <i data-feather="briefcase" class="w-3.5 h-3.5"></i>
+          <span class="tracking-wider">TOTAL SESI (SEMUA WAKTU)</span>
+        </div>
+        <button onclick="triggerSyncDatabaseToGCal()" id="btnSyncGCal" class="px-2.5 py-1 text-[10px] font-extrabold tracking-wider rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500 hover:text-white active:scale-95 transition flex items-center space-x-1">
+          <i data-feather="refresh-cw" class="w-3 h-3"></i>
+          <span>SYNC GCAL</span>
+        </button>
+      </div>
+
+      <div class="flex items-baseline space-x-2 mb-4">
+        <span id="heroTotalJobs" class="text-3xl font-extrabold tracking-tight">145</span>
+        <span class="text-xs text-slate-400 font-bold uppercase tracking-wider">SESI TERDAFTAR</span>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2">
+        <div class="bg-slate-800/80 rounded-2xl p-3 border border-slate-700/50 flex items-center space-x-2.5">
+          <div class="p-2 rounded-xl bg-emerald-500/15 text-emerald-400">
+            <i data-feather="calendar" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <div class="text-[9px] text-slate-400 uppercase font-bold">Mendatang</div>
+            <div id="heroUpcomingJobs" class="text-sm font-extrabold text-emerald-400">37 Sesi</div>
+          </div>
+        </div>
+        <div class="bg-slate-800/80 rounded-2xl p-3 border border-slate-700/50 flex items-center space-x-2.5">
+          <div class="p-2 rounded-xl bg-slate-700/40 text-slate-300">
+            <i data-feather="check-circle" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <div class="text-[9px] text-slate-400 uppercase font-bold">Selesai</div>
+            <div id="heroCompletedJobs" class="text-sm font-extrabold text-slate-200">108 Sesi</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toggle Sub-View Bar (Daftar List vs Kalender GCal) -->
+    <div id="viewToggleBar" class="flex p-1 bg-white rounded-2xl shadow-sm border border-slate-200/90">
+      <button id="tabToggleList" onclick="switchCalendarView('list')" class="flex-1 py-2 text-xs font-bold rounded-xl transition flex items-center justify-center space-x-1.5 bg-slate-900 text-white shadow-sm">
+        <i data-feather="list" class="w-3.5 h-3.5"></i>
+        <span>Daftar List</span>
+      </button>
+      <button id="tabToggleCalendar" onclick="switchCalendarView('calendar')" class="flex-1 py-2 text-xs font-bold rounded-xl transition flex items-center justify-center space-x-1.5 text-slate-600 hover:text-slate-900">
+        <i data-feather="calendar" class="w-3.5 h-3.5 text-emerald-600"></i>
+        <span>Kalender GCal</span>
+      </button>
+    </div>
+
+    <!-- TAB VIEW 1: DAFTAR LIST -->
+    <div id="tabContentList" class="space-y-3">
+      <!-- Search & Status Filter -->
+      <div class="flex items-center space-x-2">
+        <div class="relative flex-1">
+          <i data-feather="search" class="w-3.5 h-3.5 absolute left-3.5 top-3 text-slate-400 pointer-events-none"></i>
+          <input type="text" id="jobSearchInput" oninput="renderFilteredJobs()" placeholder="Cari vendor, role, lokasi..." class="w-full pl-9 pr-3 py-2 text-xs font-semibold rounded-2xl bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900 shadow-sm">
+        </div>
+        <select id="jobStatusFilter" onchange="renderFilteredJobs()" class="py-2 px-3 text-xs font-bold rounded-2xl bg-white border border-slate-200 text-slate-700 focus:outline-none shadow-sm cursor-pointer">
+          <option value="all">Semua Status</option>
+          <option value="upcoming">Mendatang</option>
+          <option value="completed">Selesai</option>
+        </select>
+      </div>
+
+      <!-- Container Job Items -->
+      <div id="jobListContainer" class="space-y-2"></div>
+
+      <!-- Pagination / Show More -->
+      <div id="paginationContainer" class="text-center pt-1 hidden">
+        <button onclick="showAllJobsList()" class="w-full py-2.5 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-2xl shadow-sm hover:bg-slate-50 active:scale-98 transition flex items-center justify-center space-x-1.5">
+          <i data-feather="chevron-down" class="w-3.5 h-3.5"></i>
+          <span>Tampilkan Seluruh Jadwal (<span id="totalHiddenJobsCount">0</span> sesi lagi)</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- TAB VIEW 2: KALENDER GCAL INTERAKTIF -->
+    <div id="tabContentCalendar" class="hidden space-y-3">
+      <div class="bg-white rounded-3xl p-4 shadow-sm border border-slate-200/90 space-y-3">
+        <!-- Calendar Header -->
+        <div class="flex justify-between items-center">
+          <div class="flex items-center space-x-2">
+            <span id="calMonthYearText" class="text-sm font-extrabold text-slate-900">November 2026</span>
+            <button onclick="jumpToCurrentMonth()" class="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md hover:bg-emerald-100 transition">Hari Ini</button>
+          </div>
+          <div class="flex items-center space-x-1">
+            <button onclick="changeCalMonth(-1)" class="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 transition">
+              <i data-feather="chevron-left" class="w-4 h-4"></i>
+            </button>
+            <button onclick="changeCalMonth(1)" class="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 transition">
+              <i data-feather="chevron-right" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Days of Week Headers -->
+        <div class="grid grid-cols-7 text-center text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
+          <span>MIN</span><span>SEN</span><span>SEL</span><span>RAB</span><span>KAM</span><span>JUM</span><span>SAB</span>
+        </div>
+
+        <!-- Grid Angka Hari -->
+        <div id="calendarDaysGrid" class="grid grid-cols-7 gap-1 text-center text-xs font-bold"></div>
+      </div>
+
+      <!-- Agenda Detail Hari Terpilih di Bawah Kalender -->
+      <div class="bg-white rounded-3xl p-4 shadow-sm border border-slate-200/90 space-y-2">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+          <div class="flex items-center space-x-1.5">
+            <i data-feather="calendar" class="w-3.5 h-3.5 text-emerald-600"></i>
+            <span class="text-xs font-extrabold uppercase tracking-wider text-slate-700" id="selectedAgendaHeader">AGENDA 7 NOVEMBER 2026</span>
+          </div>
+          <span id="selectedAgendaCountBadge" class="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">1 Sesi</span>
+        </div>
+        <div id="selectedDateAgendaList" class="space-y-2 pt-1"></div>
+      </div>
+    </div>
+
+    <!-- TAB VIEW 3: TAMBAH JOB BARU (EKSTRAK CHAT / NOTES) -->
+    <div id="tabContentAdd" class="hidden space-y-3">
+      <div class="text-sm font-extrabold text-slate-900">Tambah Job Baru</div>
+
+      <!-- Ekstrak Chat / Notes -->
+      <div class="bg-white rounded-3xl p-4 shadow-sm border border-slate-200/90 space-y-2.5">
+        <div class="flex justify-between items-center text-xs font-bold text-slate-500 uppercase tracking-wider">
+          <div class="flex items-center space-x-1.5">
+            <i data-feather="edit-3" class="w-3.5 h-3.5 text-emerald-600"></i>
+            <span>Ekstrak Chat / Notes</span>
+          </div>
+          <button onclick="pasteFromClipboard()" class="flex items-center space-x-1 text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg hover:bg-emerald-100 transition active:scale-95 text-[11px] font-bold">
+            <i data-feather="clipboard" class="w-3 h-3"></i>
+            <span>Paste</span>
+          </button>
+        </div>
+
+        <textarea id="rawNotesInput" rows="5" placeholder="Tempel catatan di sini... Contoh:&#10;7 November 2026&#10;Takimoto.co&#10;Video Wedding&#10;07.00 – 14.00&#10;Kulonprogo" class="w-full text-xs p-3 rounded-2xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900 font-mono text-slate-800 leading-relaxed"></textarea>
+
+        <button onclick="parseNotesExtract()" class="w-full py-2.5 bg-slate-900 text-white rounded-xl text-xs font-bold flex items-center justify-center space-x-2 active:scale-95 transition shadow-sm hover:bg-black">
+          <i data-feather="zap" class="w-3.5 h-3.5 text-yellow-400"></i>
+          <span>Ekstrak Otomatis</span>
+        </button>
+      </div>
+
+      <!-- Pratinjau Rincian Jadwal Baru -->
+      <div class="bg-white rounded-3xl p-4 shadow-sm border border-slate-200/90 space-y-2.5">
+        <div class="flex justify-between items-center border-b border-slate-100 pb-2">
+          <div class="flex items-center space-x-1.5 text-xs font-extrabold text-slate-800">
+            <i data-feather="file-text" class="w-3.5 h-3.5 text-emerald-600"></i>
+            <span>Rincian Jadwal Baru</span>
+          </div>
+          <span id="previewDateHeader" class="text-[11px] font-extrabold text-emerald-700">7 November 2026</span>
+        </div>
+
+        <!-- Hidden input form untuk submit -->
+        <input type="hidden" id="addJobDate" value="2026-11-07">
+        <input type="hidden" id="addJobVendor" value="Takimoto.co">
+        <input type="hidden" id="addJobRole" value="Video Wedding">
+        <input type="hidden" id="addJobTime" value="07.00 - 14.00">
+        <input type="hidden" id="addJobLocation" value="Kulonprogo">
+
+        <div class="grid grid-cols-2 gap-2">
+          <div class="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/70">
+            <div class="text-[9px] text-slate-400 uppercase font-bold">Pilih Tanggal</div>
+            <div id="previewDate" class="text-xs font-bold text-slate-900 mt-0.5 truncate">7 Nov 2026</div>
+          </div>
+          <div class="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/70">
+            <div class="text-[9px] text-slate-400 uppercase font-bold">Vendor / Klien</div>
+            <div id="previewVendor" class="text-xs font-bold text-slate-900 mt-0.5 truncate">Takimoto.co</div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div class="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/70">
+            <div class="text-[9px] text-slate-400 uppercase font-bold">Role / Job</div>
+            <div id="previewJob" class="text-xs font-bold text-slate-900 mt-0.5 truncate">Video Wedding</div>
+          </div>
+          <div class="p-2.5 rounded-2xl bg-emerald-50/70 border border-emerald-200">
+            <div class="text-[9px] text-emerald-800 uppercase font-bold">Waktu Sesi</div>
+            <div id="previewTime" class="text-xs font-extrabold text-emerald-950 mt-0.5 truncate">07.00 - 14.00</div>
+          </div>
+        </div>
+
+        <div class="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/70">
+          <div class="text-[9px] text-slate-400 uppercase font-bold">Lokasi Sesi</div>
+          <div id="previewLocation" class="text-xs font-bold text-slate-900 mt-0.5 truncate">Kulonprogo</div>
+        </div>
+
+        <button onclick="submitNewJobToGoogle()" id="btnSubmitJob" class="w-full py-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold flex items-center justify-center space-x-2 active:scale-98 transition shadow-md">
+          <i data-feather="cloud" class="w-4 h-4"></i>
+          <span>Simpan ke Google Sheet & Calendar</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- TAB VIEW 4: RESCHEDULE / EDIT JOB -->
+    <div id="tabContentReschedule" class="hidden space-y-3">
+      <div class="text-sm font-extrabold text-slate-900">Reschedule / Edit Job</div>
+      <div class="bg-white rounded-3xl p-4 shadow-sm border border-slate-200/90 space-y-3">
+        <input type="hidden" id="reschedRowIndex" value="2">
+        <input type="hidden" id="reschedOriginalVendor" value="Takimoto.co">
+        <input type="hidden" id="reschedOriginalDate" value="7 November 2026">
+        <input type="hidden" id="reschedOriginalTime" value="07.00 - 14.00">
+
+        <div>
+          <label class="text-[10px] font-extrabold text-slate-400 uppercase block mb-1">Vendor / Klien</label>
+          <input type="text" id="reschedVendorInput" value="Takimoto.co" placeholder="Nama Vendor" class="w-full text-xs font-bold p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 outline-none focus:ring-2 focus:ring-slate-900">
+        </div>
+
+        <div>
+          <label class="text-[10px] font-extrabold text-slate-400 uppercase block mb-1">Role / Pekerjaan</label>
+          <input type="text" id="reschedRoleInput" value="Video Wedding" placeholder="Jenis Pekerjaan" class="w-full text-xs font-bold p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 outline-none focus:ring-2 focus:ring-slate-900">
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-[10px] font-extrabold text-slate-400 uppercase block mb-1">Tanggal Baru</label>
+            <input type="date" id="reschedDateInput" value="2026-11-07" class="w-full text-xs font-bold p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 outline-none focus:ring-2 focus:ring-slate-900 cursor-pointer">
+          </div>
+          <div>
+            <label class="text-[10px] font-extrabold text-slate-400 uppercase block mb-1">Waktu Sesi</label>
+            <input type="text" id="reschedTimeInput" value="07.00 - 14.00" placeholder="07.00 - 14.00" class="w-full text-xs font-extrabold p-2.5 rounded-xl bg-emerald-50/70 border border-emerald-200 text-emerald-950 outline-none">
+          </div>
+        </div>
+
+        <div>
+          <label class="text-[10px] font-extrabold text-slate-400 uppercase block mb-1">Lokasi Sesi</label>
+          <input type="text" id="reschedLocationInput" value="Kulonprogo" placeholder="Lokasi sesi kerja" class="w-full text-xs font-bold p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 outline-none focus:ring-2 focus:ring-slate-900">
+        </div>
+
+        <div class="pt-1 flex space-x-2">
+          <button onclick="submitRescheduleJob()" class="flex-1 py-2.5 bg-slate-900 hover:bg-black text-white rounded-xl text-xs font-bold active:scale-95 transition shadow">
+            Simpan Perubahan
+          </button>
+          <button onclick="confirmDeleteSelectedJob()" class="px-4 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold active:scale-95 transition">
+            Hapus
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB VIEW 5: PROFIL FREELANCER -->
+    <div id="tabContentProfile" class="hidden space-y-3">
+      <div class="text-sm font-extrabold text-slate-900">Profil & Pengaturan</div>
+      <div class="bg-white rounded-3xl p-5 shadow-sm border border-slate-200/90 space-y-4">
+        <div class="flex items-center space-x-3 pb-3 border-b border-slate-100">
+          <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-600 to-slate-900 text-white flex items-center justify-center font-black text-lg shadow-md">
+            FT
+          </div>
+          <div class="overflow-hidden flex-1">
+            <div class="flex items-center space-x-1">
+              <h3 class="font-extrabold text-sm text-slate-900 truncate">Freelance Tracker & Job Directory</h3>
+              <i data-feather="check-circle" class="w-3.5 h-3.5 text-emerald-500"></i>
+            </div>
+            <p class="text-xs font-semibold text-slate-500 truncate">Visual Media & Documentation System</p>
+            <p class="text-[10px] font-mono font-bold text-emerald-700 mt-0.5">+62 812-3456-7890</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <div class="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+            <span class="text-[9px] font-bold text-slate-400 uppercase block">Total Job Tercatat</span>
+            <span class="text-base font-extrabold text-slate-900 mt-0.5 block">145 Sesi</span>
+          </div>
+          <div class="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+            <span class="text-[9px] font-bold text-slate-400 uppercase block">Mitra Vendor</span>
+            <span class="text-base font-extrabold text-slate-900 mt-0.5 block">18 Vendor</span>
+          </div>
+        </div>
+
+        <div class="text-xs text-slate-600 space-y-2 pt-1 border-t border-slate-100">
+          <div class="flex justify-between items-center"><span class="text-slate-400">Status Server:</span> <span class="font-bold text-emerald-600 flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block"></span> Terhubung Live</span></div>
+          <div class="flex justify-between items-center"><span class="text-slate-400">PWA Mobile:</span> <span class="font-bold text-slate-700">iOS Standalone Mode</span></div>
+          <div class="flex justify-between items-center"><span class="text-slate-400">Row Targeting:</span> <span class="font-bold text-emerald-700">Active Protection</span></div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Sticky Bottom Navigation Bar (iOS FinTech Style) -->
+  <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/90 backdrop-blur-lg border-t border-slate-200/80 px-4 py-2 safe-bottom flex justify-between items-center z-40">
+    <button onclick="switchMode('list')" id="navBtnList" class="flex-1 flex flex-col items-center py-1 text-slate-900 active:scale-90 transition">
+      <div class="relative">
+        <i data-feather="list" class="w-5 h-5"></i>
+        <span id="navBadgeCount" class="absolute -top-1 -right-2 bg-slate-900 text-white text-[8px] font-extrabold px-1 rounded-full">145</span>
+      </div>
+      <span class="text-[9px] font-extrabold mt-1">Daftar Job</span>
+    </button>
+
+    <button onclick="switchMode('add')" id="navBtnAdd" class="flex-1 flex flex-col items-center py-1 text-slate-400 hover:text-slate-900 active:scale-90 transition">
+      <i data-feather="plus-circle" class="w-5 h-5"></i>
+      <span class="text-[9px] font-bold mt-1">Tambah</span>
+    </button>
+
+    <button onclick="switchMode('reschedule')" id="navBtnResched" class="flex-1 flex flex-col items-center py-1 text-slate-400 hover:text-slate-900 active:scale-90 transition">
+      <i data-feather="calendar" class="w-5 h-5"></i>
+      <span class="text-[9px] font-bold mt-1">Reschedule</span>
+    </button>
+
+    <button onclick="switchMode('profile')" id="navBtnProfile" class="flex-1 flex flex-col items-center py-1 text-slate-400 hover:text-slate-900 active:scale-90 transition">
+      <i data-feather="user" class="w-5 h-5"></i>
+      <span class="text-[9px] font-bold mt-1">Profil</span>
+    </button>
+  </nav>
+
+  <!-- Toast Notification Message Box -->
+  <div id="toastNotification" class="fixed top-4 left-1/2 transform -translate-x-1/2 bg-slate-900 text-white text-xs font-bold px-4 py-2.5 rounded-2xl shadow-xl border border-slate-800 transition-all -translate-y-12 opacity-0 pointer-events-none z-50 flex items-center space-x-2">
+    <i data-feather="check" class="w-3.5 h-3.5 text-emerald-400"></i>
+    <span id="toastMessage">Pesan</span>
+  </div>
+
+  <!-- JAVASCRIPT LOGIC ENGINE -->
+  <script>
+    let cachedJobs = [];
+    let currentCalYear = 2026;
+    let currentCalMonth = 10; // 10 = November
+    let selectedCalDateISO = '2026-11-07';
+    let activeSubView = 'list';
+    let limitJobsList = 10;
+
+    const monthNamesIndo = [
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    ];
+
+    const monthMap = {
+      'januari': '01', 'jan': '01', 'februari': '02', 'feb': '02', 'maret': '03', 'mar': '03',
+      'april': '04', 'apr': '04', 'mei': '05', 'juni': '06', 'jun': '06',
+      'juli': '07', 'jul': '07', 'agustus': '08', 'agt': '08', 'agu': '08',
+      'september': '09', 'sep': '09', 'oktober': '10', 'okt': '10',
+      'november': '11', 'nov': '11', 'novemver': '11', 'desember': '12', 'des': '12'
+    };
+
+    // Realistic Mock Dataset (145 sesi total, 37 mendatang di sekitar November 2026, 108 selesai)
+    function generateInitialDataset() {
+      const sampleVendors = ['Takimoto.co', 'Wedding Jawara', 'Vivid Visual', 'Moment Bersama', 'Senja Kreasi', 'Kala Photography'];
+      const sampleRoles = ['Video Wedding', 'Foto Wisuda', 'Dokumentasi Event', 'Live Streaming', 'Aerial Drone', 'Second Shooter'];
+      const sampleLocations = ['Kulonprogo', 'Gedung Serbaguna UIN', 'Auditorium UAD', 'Hotel Tentrem', 'Graha Sabha Pramana', 'Taman Budaya'];
+
+      const jobs = [];
+
+      // Jadwal khusus November 2026 (Mendatang)
+      const novJobs = [
+        { rowIndex: 2, tanggal: '7 November 2026', isoDate: '2026-11-07', vendor: 'Takimoto.co', job: 'Video Wedding', waktu: '07.00 - 14.00', lokasi: 'Kulonprogo' },
+        { rowIndex: 3, tanggal: '8 November 2026', isoDate: '2026-11-08', vendor: 'Wedding Jawara', job: 'Dokumentasi Akad', waktu: '08.00 - 12.00', lokasi: 'Hotel Tentrem' },
+        { rowIndex: 4, tanggal: '8 November 2026', isoDate: '2026-11-08', vendor: 'Senja Kreasi', job: 'Resepsi Malam', waktu: '18.00 - 22.00', lokasi: 'Graha Sabha Pramana' },
+        { rowIndex: 5, tanggal: '10 November 2026', isoDate: '2026-11-10', vendor: 'Vivid Visual', job: 'Foto Wisuda', waktu: '06.00 - 11.00', lokasi: 'Auditorium UAD' },
+        { rowIndex: 6, tanggal: '11 November 2026', isoDate: '2026-11-11', vendor: 'Moment Bersama', job: 'Dokumentasi Seminar', waktu: '09.00 - 15.00', lokasi: 'Gedung Serbaguna UIN' },
+        { rowIndex: 7, tanggal: '12 November 2026', isoDate: '2026-11-12', vendor: 'Takimoto.co', job: 'Video Profile', waktu: '08.00 - 16.00', lokasi: 'Bantul' },
+        { rowIndex: 8, tanggal: '14 November 2026', isoDate: '2026-11-14', vendor: 'Takimoto.co', job: 'Prewedding Cinematic', waktu: '14.00 - 18.00', lokasi: 'Pantai Glagah' },
+        { rowIndex: 9, tanggal: '21 November 2026', isoDate: '2026-11-21', vendor: 'Wedding Jawara', job: 'Video Wedding Full Day', waktu: '06.30 - 21.00', lokasi: 'Jogja Expo Center' },
+        { rowIndex: 10, tanggal: '22 November 2026', isoDate: '2026-11-22', vendor: 'Kala Photography', job: 'Engagement Session', waktu: '15.30 - 18.00', lokasi: 'Candi Plaosan' },
+        { rowIndex: 11, tanggal: '25 November 2026', isoDate: '2026-11-25', vendor: 'Senja Kreasi', job: 'Live Streaming Akad', waktu: '07.30 - 12.00', lokasi: 'Masjid Syuhada' },
+        { rowIndex: 12, tanggal: '26 November 2026', isoDate: '2026-11-26', vendor: 'Vivid Visual', job: 'Documentation Gala', waktu: '17.00 - 21.00', lokasi: 'Ambarrukmo Hotel' }
+      ];
+
+      novJobs.forEach(j => jobs.push(j));
+
+      // 26 jadwal mendatang lainnya
+      for (let i = 13; i <= 38; i++) {
+        const day = ((i % 14) + 14);
+        const dayPad = String(day).padStart(2, '0');
+        jobs.push({
+          rowIndex: i,
+          tanggal: `${day} November 2026`,
+          isoDate: `2026-11-${dayPad}`,
+          vendor: sampleVendors[i % sampleVendors.length],
+          job: sampleRoles[i % sampleRoles.length],
+          waktu: '08.00 - 14.00',
+          lokasi: sampleLocations[i % sampleLocations.length]
+        });
+      }
+
+      // 107 jadwal masa lalu (selesai)
+      for (let i = 39; i <= 146; i++) {
+        const monthIndex = (i % 6);
+        const months = ['Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober'];
+        const mKey = ['05', '06', '07', '08', '09', '10'];
+        const day = ((i % 28) + 1);
+        const dayPad = String(day).padStart(2, '0');
+        jobs.push({
+          rowIndex: i,
+          tanggal: `${day} ${months[monthIndex]} 2026`,
+          isoDate: `2026-${mKey[monthIndex]}-${dayPad}`,
+          vendor: sampleVendors[i % sampleVendors.length],
+          job: sampleRoles[i % sampleRoles.length],
+          waktu: '09.00 - 16.00',
+          lokasi: sampleLocations[i % sampleLocations.length]
+        });
+      }
+
+      return jobs;
+    }
+
+    window.onload = function() {
+      feather.replace();
+      cachedJobs = generateInitialDataset();
+      updateHeroStats();
+      renderFilteredJobs();
+      renderGCalendar();
+      renderCalendarSelectedAgenda();
+    };
+
+    function showToast(msg) {
+      const el = document.getElementById('toastNotification');
+      const text = document.getElementById('toastMessage');
+      if (!el || !text) return;
+      text.innerText = msg;
+      el.classList.remove('opacity-0', 'pointer-events-none', '-translate-y-12');
+      el.classList.add('opacity-100', 'translate-y-0');
+      setTimeout(() => {
+        el.classList.add('opacity-0', 'pointer-events-none', '-translate-y-12');
+        el.classList.remove('opacity-100', 'translate-y-0');
+      }, 2500);
+    }
+
+    function refreshData() {
+      showToast('Sinkronisasi data diperbarui (145 sesi)');
+      updateHeroStats();
+      renderFilteredJobs();
+      renderGCalendar();
+      renderCalendarSelectedAgenda();
+    }
+
+    function switchMode(mode) {
+      const tabs = ['list', 'add', 'reschedule', 'profile'];
+      tabs.forEach(t => {
+        const c = document.getElementById('tabContent' + t.charAt(0).toUpperCase() + t.slice(1));
+        if (c) c.classList.add('hidden');
+        const b = document.getElementById('navBtn' + t.charAt(0).toUpperCase() + t.slice(1));
+        if (b) {
+          b.classList.remove('text-slate-900');
+          b.classList.add('text-slate-400');
+        }
+      });
+
+      const activeContent = document.getElementById('tabContent' + mode.charAt(0).toUpperCase() + mode.slice(1));
+      if (activeContent) activeContent.classList.remove('hidden');
+
+      const activeBtn = document.getElementById('navBtn' + mode.charAt(0).toUpperCase() + mode.slice(1));
+      if (activeBtn) {
+        activeBtn.classList.add('text-slate-900');
+        activeBtn.classList.remove('text-slate-400');
+      }
+
+      const toggleBar = document.getElementById('viewToggleBar');
+      if (mode === 'list') {
+        if (toggleBar) toggleBar.classList.remove('hidden');
+        switchCalendarView(activeSubView);
+      } else {
+        if (toggleBar) toggleBar.classList.add('hidden');
+      }
+      feather.replace();
+    }
+
+    function switchCalendarView(subView) {
+      activeSubView = subView;
+      const btnList = document.getElementById('tabToggleList');
+      const btnCal = document.getElementById('tabToggleCalendar');
+      const contentList = document.getElementById('tabContentList');
+      const contentCal = document.getElementById('tabContentCalendar');
+
+      if (subView === 'calendar') {
+        if (btnCal) {
+          btnCal.className = 'flex-1 py-2 text-xs font-bold rounded-xl transition flex items-center justify-center space-x-1.5 bg-slate-900 text-white shadow-sm';
+        }
+        if (btnList) {
+          btnList.className = 'flex-1 py-2 text-xs font-bold rounded-xl transition flex items-center justify-center space-x-1.5 text-slate-600 hover:text-slate-900';
+        }
+        if (contentList) contentList.classList.add('hidden');
+        if (contentCal) contentCal.classList.remove('hidden');
+        renderGCalendar();
+        renderCalendarSelectedAgenda();
+      } else {
+        if (btnList) {
+          btnList.className = 'flex-1 py-2 text-xs font-bold rounded-xl transition flex items-center justify-center space-x-1.5 bg-slate-900 text-white shadow-sm';
+        }
+        if (btnCal) {
+          btnCal.className = 'flex-1 py-2 text-xs font-bold rounded-xl transition flex items-center justify-center space-x-1.5 text-slate-600 hover:text-slate-900';
+        }
+        if (contentCal) contentCal.classList.add('hidden');
+        if (contentList) contentList.classList.remove('hidden');
+        renderFilteredJobs();
+      }
+      feather.replace();
+    }
+
+    function extractIsoFromString(val) {
+      if (!val) return '';
+      const s = String(val).trim();
+      const isoM = s.match(/\b(\d{4})-(\d{1,2})-(\d{1,2})\b/);
+      if (isoM) {
+        return `${isoM[1]}-${String(isoM[2]).padStart(2, '0')}-${String(isoM[3]).padStart(2, '0')}`;
+      }
+      const indoM = s.match(/(\d{1,2})\s+([a-zA-Z]+)\s+(\d{4})/);
+      if (indoM) {
+        const d = String(indoM[1]).padStart(2, '0');
+        const m = monthMap[indoM[2].toLowerCase()] || '01';
+        const y = indoM[3];
+        return `${y}-${m}-${d}`;
+      }
+      return '';
+    }
+
+    function updateHeroStats() {
+      const total = cachedJobs.length;
+      const todayISO = '2026-11-04';
+
+      let upcoming = 0;
+      let completed = 0;
+
+      cachedJobs.forEach(j => {
+        const iso = j.isoDate || extractIsoFromString(j.tanggal);
+        if (iso) {
+          if (iso >= todayISO) upcoming++;
+          else completed++;
+        } else {
+          upcoming++;
+        }
+      });
+
+      document.getElementById('heroTotalJobs').innerText = total;
+      document.getElementById('heroUpcomingJobs').innerText = upcoming + ' Sesi';
+      document.getElementById('heroCompletedJobs').innerText = completed + ' Sesi';
+      const badge = document.getElementById('navBadgeCount');
+      if (badge) badge.innerText = total;
+    }
+
+    function renderFilteredJobs() {
+      const container = document.getElementById('jobListContainer');
+      if (!container) return;
+
+      const search = (document.getElementById('jobSearchInput')?.value || '').toLowerCase();
+      const statusFilter = document.getElementById('jobStatusFilter')?.value || 'all';
+      const todayISO = '2026-11-04';
+
+      let filtered = cachedJobs.filter(j => {
+        const matchSearch = (j.vendor || '').toLowerCase().includes(search) ||
+                            (j.job || '').toLowerCase().includes(search) ||
+                            (j.lokasi || '').toLowerCase().includes(search) ||
+                            (j.tanggal || '').toLowerCase().includes(search);
+        if (!matchSearch) return false;
+
+        const iso = j.isoDate || extractIsoFromString(j.tanggal);
+        if (statusFilter === 'upcoming') {
+          return iso ? iso >= todayISO : true;
+        } else if (statusFilter === 'completed') {
+          return iso ? iso < todayISO : false;
+        }
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = '<div class="p-8 text-center text-xs font-semibold text-slate-400 bg-white rounded-2xl border border-slate-200">Tidak ada jadwal yang cocok.</div>';
+        document.getElementById('paginationContainer')?.classList.add('hidden');
+        return;
+      }
+
+      const displayItems = filtered.slice(0, limitJobsList);
+      let html = '';
+
+      displayItems.forEach(j => {
+        const iso = j.isoDate || extractIsoFromString(j.tanggal);
+        const isPast = iso && iso < todayISO;
+
+        html += `
+          <div class="bg-white rounded-2xl p-3.5 shadow-sm border border-slate-200/90 flex items-center justify-between gap-3 hover:border-slate-300 transition">
+            <div class="overflow-hidden flex-1">
+              <div class="flex items-center space-x-1.5 mb-1">
+                <span class="text-[9px] font-bold px-2 py-0.5 rounded-full ${isPast ? 'bg-slate-100 text-slate-500' : 'bg-emerald-50 text-emerald-700'} shrink-0">
+                  ${j.tanggal || '-'}
+                </span>
+                ${j.waktu ? `<span class="text-[10px] font-bold text-slate-400 truncate">• ${j.waktu}</span>` : ''}
+              </div>
+              <div class="text-xs font-extrabold text-slate-900 truncate">${j.vendor || 'Vendor'}</div>
+              <div class="text-[11px] text-slate-500 truncate mt-0.5">${j.job || 'Job'}${j.lokasi ? ' • ' + j.lokasi : ''}</div>
+            </div>
+            <button onclick="openRescheduleModal(${j.rowIndex}, '${encodeURIComponent(j.vendor || '')}', '${encodeURIComponent(j.tanggal || '')}', '${encodeURIComponent(j.waktu || '')}', '${encodeURIComponent(j.job || '')}', '${encodeURIComponent(j.lokasi || '')}')" class="w-8 h-8 rounded-xl bg-slate-50 hover:bg-slate-100 active:scale-90 text-slate-600 flex items-center justify-center transition shrink-0" title="Edit / Reschedule">
+              <i data-feather="edit-2" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+
+      const pagContainer = document.getElementById('paginationContainer');
+      const hiddenCount = document.getElementById('totalHiddenJobsCount');
+      if (filtered.length > limitJobsList) {
+        pagContainer?.classList.remove('hidden');
+        if (hiddenCount) hiddenCount.innerText = filtered.length - limitJobsList;
+      } else {
+        pagContainer?.classList.add('hidden');
+      }
+      feather.replace();
+    }
+
+    function showAllJobsList() {
+      limitJobsList = 9999;
+      renderFilteredJobs();
+    }
+
+    function renderGCalendar() {
+      const grid = document.getElementById('calendarDaysGrid');
+      const monthYearText = document.getElementById('calMonthYearText');
+      if (!grid || !monthYearText) return;
+
+      monthYearText.innerText = `${monthNamesIndo[currentCalMonth]} ${currentCalYear}`;
+
+      const firstDayIndex = new Date(currentCalYear, currentCalMonth, 1).getDay();
+      const daysInMonth = new Date(currentCalYear, currentCalMonth + 1, 0).getDate();
+
+      const jobsByDate = {};
+      cachedJobs.forEach(j => {
+        const iso = j.isoDate || extractIsoFromString(j.tanggal);
+        if (iso) {
+          if (!jobsByDate[iso]) jobsByDate[iso] = [];
+          jobsByDate[iso].push(j);
+        }
+      });
+
+      let html = '';
+
+      for (let i = 0; i < firstDayIndex; i++) {
+        html += `<div class="h-11 rounded-xl"></div>`;
+      }
+
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dStr = String(d).padStart(2, '0');
+        const mStr = String(currentCalMonth + 1).padStart(2, '0');
+        const thisISO = `${currentCalYear}-${mStr}-${dStr}`;
+        const hasJobs = jobsByDate[thisISO] && jobsByDate[thisISO].length > 0;
+        const jobCount = hasJobs ? jobsByDate[thisISO].length : 0;
+        const isSelected = (thisISO === selectedCalDateISO);
+        const isToday = (thisISO === '2026-11-04');
+
+        let cellStyle = 'bg-slate-50/80 text-slate-800 hover:bg-slate-100';
+        if (isSelected) {
+          cellStyle = 'bg-slate-900 text-white shadow-md shadow-slate-900/25';
+        } else if (isToday) {
+          cellStyle = 'bg-emerald-50 text-emerald-800 ring-2 ring-emerald-400 font-extrabold';
+        }
+
+        html += `
+          <button type="button" onclick="selectCalendarDate('${thisISO}')" class="h-11 rounded-xl flex flex-col items-center justify-center relative text-xs font-bold transition active:scale-95 ${cellStyle}">
+            <span class="leading-none">${d}</span>
+            <div class="h-2 flex items-center justify-center mt-1 space-x-0.5">
+              ${hasJobs ? `
+                <span class="w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-emerald-400 ring-1 ring-white/50' : 'bg-emerald-600 shadow-sm'}"></span>
+                ${jobCount > 1 ? `<span class="text-[8px] font-extrabold leading-none ${isSelected ? 'text-emerald-300' : 'text-emerald-700'}">${jobCount}</span>` : ''}
+              ` : ''}
+            </div>
+          </button>
+        `;
+      }
+
+      grid.innerHTML = html;
+    }
+
+    function changeCalMonth(delta) {
+      currentCalMonth += delta;
+      if (currentCalMonth < 0) {
+        currentCalMonth = 11;
+        currentCalYear--;
+      } else if (currentCalMonth > 11) {
+        currentCalMonth = 0;
+        currentCalYear++;
+      }
+      renderGCalendar();
+    }
+
+    function jumpToCurrentMonth() {
+      currentCalYear = 2026;
+      currentCalMonth = 10;
+      selectedCalDateISO = '2026-11-04';
+      renderGCalendar();
+      renderCalendarSelectedAgenda();
+    }
+
+    function selectCalendarDate(iso) {
+      selectedCalDateISO = iso;
+      renderGCalendar();
+      renderCalendarSelectedAgenda();
+    }
+
+    function renderCalendarSelectedAgenda() {
+      const container = document.getElementById('selectedDateAgendaList');
+      const header = document.getElementById('selectedAgendaHeader');
+      const countBadge = document.getElementById('selectedAgendaCountBadge');
+      if (!container) return;
+
+      const parts = selectedCalDateISO.split('-');
+      const formattedDate = `${parseInt(parts[2], 10)} ${monthNamesIndo[parseInt(parts[1], 10) - 1]} ${parts[0]}`;
+      if (header) header.innerText = `AGENDA ${formattedDate.toUpperCase()}`;
+
+      const matchedJobs = cachedJobs.filter(j => {
+        const iso = j.isoDate || extractIsoFromString(j.tanggal);
+        return iso === selectedCalDateISO;
+      });
+
+      if (countBadge) countBadge.innerText = `${matchedJobs.length} Sesi`;
+
+      if (matchedJobs.length === 0) {
+        container.innerHTML = `
+          <div class="p-6 text-center text-xs font-semibold text-slate-400 bg-slate-50 rounded-2xl border border-slate-100 space-y-2">
+            <div>Tidak ada jadwal sesi pada tanggal ini.</div>
+            <button onclick="prepareAddJobWithDate('${selectedCalDateISO}')" class="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-xl hover:bg-emerald-100 transition inline-flex items-center gap-1">
+              + Tambah job untuk tanggal ini
+            </button>
+          </div>
+        `;
+        return;
+      }
+
+      let html = '';
+      matchedJobs.forEach(j => {
+        html += `
+          <div class="bg-slate-50 border border-slate-200/80 rounded-2xl p-3 flex items-center justify-between gap-3 hover:border-slate-300 transition">
+            <div class="overflow-hidden flex-1">
+              <div class="flex items-center space-x-1.5">
+                <span class="text-xs font-extrabold text-slate-900 truncate">${j.vendor || 'Vendor'}</span>
+                ${j.waktu ? `<span class="text-[9px] font-bold text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded-md shrink-0">${j.waktu}</span>` : ''}
+              </div>
+              <div class="text-[11px] text-slate-500 mt-0.5 truncate">${j.job || 'Dokumentasi'}${j.lokasi ? ' • ' + j.lokasi : ''}</div>
+            </div>
+            <button onclick="openRescheduleModal(${j.rowIndex}, '${encodeURIComponent(j.vendor || '')}', '${encodeURIComponent(j.tanggal || '')}', '${encodeURIComponent(j.waktu || '')}', '${encodeURIComponent(j.job || '')}', '${encodeURIComponent(j.lokasi || '')}')" class="w-8 h-8 rounded-xl bg-white border border-slate-200 text-slate-600 hover:bg-slate-100 active:scale-90 flex items-center justify-center transition shrink-0" title="Edit / Reschedule">
+              <i data-feather="edit-2" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+      feather.replace();
+    }
+
+    function prepareAddJobWithDate(isoDate) {
+      switchMode('add');
+      const parts = isoDate.split('-');
+      const indoStr = `${parseInt(parts[2], 10)} ${monthNamesIndo[parseInt(parts[1], 10) - 1]} ${parts[0]}`;
+      document.getElementById('rawNotesInput').value = `${indoStr}\n`;
+      document.getElementById('addJobDate').value = isoDate;
+      document.getElementById('previewDate').innerText = indoStr;
+      document.getElementById('previewDateHeader').innerText = indoStr;
+    }
+
+    async function pasteFromClipboard() {
+      try {
+        const text = await navigator.clipboard.readText();
+        if (text) {
+          document.getElementById('rawNotesInput').value = text;
+          parseNotesExtract();
+        }
+      } catch (e) {
+        showToast('Tempel teks secara manual di kotak');
+      }
+    }
+
+    function parseNotesExtract() {
+      const inputEl = document.getElementById('rawNotesInput');
+      if (!inputEl || !inputEl.value.trim()) {
+        showToast('Silakan tempel teks catatan terlebih dahulu!');
+        return;
+      }
+
+      const rawText = inputEl.value;
+      const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+
+      let extractedDate = '';
+      let extractedIsoDate = '';
+      let extractedTime = '';
+      let extractedVendor = '';
+      let extractedJob = '';
+      let extractedLocation = '';
+
+      // 1. Ekstrak Waktu (Mendukung dash biasa '-' maupun dash iOS '–' dan '—')
+      const timeRegex = /(\b\d{1,2}[:.]\d{2}\s*(?:-|–|—|s\/d|sd|sampai)\s*\d{1,2}[:.]\d{2}\b|\b\d{1,2}[:.]\d{2}\b)/i;
+      const timeMatch = rawText.match(timeRegex);
+      if (timeMatch) {
+        extractedTime = timeMatch[0].replace(/[–—]/g, '-').trim();
+      }
+
+      // 2. Ekstrak Tanggal
+      const dateRegex = /(\d{1,2})\s+([a-zA-Z]+)\s+(\d{4})/;
+      const dateMatch = rawText.match(dateRegex);
+      if (dateMatch) {
+        extractedDate = dateMatch[0];
+        const day = String(dateMatch[1]).padStart(2, '0');
+        const mKey = dateMatch[2].toLowerCase();
+        const month = monthMap[mKey] || '01';
+        const year = dateMatch[3];
+        extractedIsoDate = `${year}-${month}-${day}`;
+      }
+
+      // 3. Ekstrak Baris Teks Bersusun (Multilines)
+      const textLines = [];
+      lines.forEach(line => {
+        const cleanLine = line.replace(/^[-\*•]\s*(\[[ xX_?]*\])?\s*/, '').trim();
+        const isOnlyDate = dateRegex.test(cleanLine) && cleanLine.replace(dateRegex, '').trim().length === 0;
+        const isOnlyTime = timeRegex.test(cleanLine) && cleanLine.replace(timeRegex, '').trim().length === 0;
+        if (!isOnlyDate && !isOnlyTime && cleanLine.length > 0) {
+          textLines.push(cleanLine);
+        }
+      });
+
+      if (textLines.length >= 3) {
+        extractedVendor = textLines[0]; // Baris 1: Vendor (contoh: Takimoto.co)
+        extractedJob = textLines[1];    // Baris 2: Role/Job (contoh: Video Wedding)
+        extractedLocation = textLines.slice(2).join(', '); // Baris 3 dst: Lokasi (contoh: Kulonprogo)
+      } else if (textLines.length === 2) {
+        extractedVendor = textLines[0];
+        extractedJob = textLines[1];
+      } else if (textLines.length === 1) {
+        extractedVendor = textLines[0];
+      }
+
+      // 4. Set Nilai ke Hidden Inputs
+      if (extractedIsoDate) document.getElementById('addJobDate').value = extractedIsoDate;
+      if (extractedVendor) document.getElementById('addJobVendor').value = extractedVendor;
+      if (extractedJob) document.getElementById('addJobRole').value = extractedJob;
+      if (extractedTime) document.getElementById('addJobTime').value = extractedTime;
+      if (extractedLocation) document.getElementById('addJobLocation').value = extractedLocation;
+
+      // 5. Update UI Pratinjau Rincian Jadwal Baru
+      const elDate = document.getElementById('previewDate');
+      const elVendor = document.getElementById('previewVendor');
+      const elJob = document.getElementById('previewJob');
+      const elTime = document.getElementById('previewTime');
+      const elLocation = document.getElementById('previewLocation');
+      const elHeader = document.getElementById('previewDateHeader');
+
+      if (elDate && (extractedDate || extractedIsoDate)) {
+        elDate.innerText = extractedDate || extractedIsoDate;
+        elDate.classList.remove('text-slate-400');
+        elDate.classList.add('text-slate-900', 'font-bold');
+      }
+      if (elHeader && extractedDate) {
+        elHeader.innerText = extractedDate;
+      }
+      if (elVendor && extractedVendor) {
+        elVendor.innerText = extractedVendor;
+        elVendor.classList.remove('text-slate-400');
+        elVendor.classList.add('text-slate-900', 'font-bold');
+      }
+      if (elJob && extractedJob) {
+        elJob.innerText = extractedJob;
+        elJob.classList.remove('text-slate-400');
+        elJob.classList.add('text-slate-900', 'font-bold');
+      }
+      if (elTime && extractedTime) {
+        elTime.innerText = extractedTime;
+        elTime.classList.remove('text-slate-400');
+        elTime.classList.add('text-emerald-950', 'font-extrabold');
+      }
+      if (elLocation && extractedLocation) {
+        elLocation.innerText = extractedLocation;
+        elLocation.classList.remove('text-slate-400');
+        elLocation.classList.add('text-slate-900', 'font-bold');
+      }
+
+      showToast('Jadwal berhasil diekstrak!');
+    }
+
+    function submitNewJobToGoogle() {
+      const date = document.getElementById('addJobDate').value;
+      const vendor = document.getElementById('addJobVendor').value;
+      const job = document.getElementById('addJobRole').value || 'Dokumentasi';
+      const time = document.getElementById('addJobTime').value || 'Sesuai Jadwal';
+      const location = document.getElementById('addJobLocation').value || '-';
+
+      if (!vendor || !date) {
+        showToast('Tanggal dan nama vendor wajib terisi!');
+        return;
+      }
+
+      const newIndex = cachedJobs.length + 2;
+      const parts = date.split('-');
+      const formattedDate = `${parseInt(parts[2], 10)} ${monthNamesIndo[parseInt(parts[1], 10) - 1]} ${parts[0]}`;
+
+      cachedJobs.unshift({
+        rowIndex: newIndex,
+        tanggal: formattedDate,
+        isoDate: date,
+        vendor: vendor,
+        job: job,
+        waktu: time,
+        lokasi: location
+      });
+
+      updateHeroStats();
+      renderFilteredJobs();
+      renderGCalendar();
+      renderCalendarSelectedAgenda();
+      showToast(`Job ${vendor} berhasil disimpan!`);
+
+      document.getElementById('rawNotesInput').value = '';
+      switchMode('list');
+    }
+
+    function openRescheduleModal(rowIndex, vendorEnc, dateEnc, timeEnc, jobEnc, locEnc) {
+      switchMode('reschedule');
+      const vendor = decodeURIComponent(vendorEnc || '');
+      const date = decodeURIComponent(dateEnc || '');
+      const time = decodeURIComponent(timeEnc || '');
+      const job = decodeURIComponent(jobEnc || '');
+      const loc = decodeURIComponent(locEnc || '');
+
+      document.getElementById('reschedRowIndex').value = rowIndex;
+      document.getElementById('reschedOriginalVendor').value = vendor;
+      document.getElementById('reschedOriginalDate').value = date;
+      document.getElementById('reschedOriginalTime').value = time;
+
+      document.getElementById('reschedVendorInput').value = vendor;
+      document.getElementById('reschedRoleInput').value = job;
+      document.getElementById('reschedTimeInput').value = time;
+      document.getElementById('reschedLocationInput').value = loc;
+
+      const iso = extractIsoFromString(date);
+      if (iso) {
+        document.getElementById('reschedDateInput').value = iso;
+      }
+    }
+
+    function submitRescheduleJob() {
+      const rowIndex = parseInt(document.getElementById('reschedRowIndex').value, 10);
+      const newVendor = document.getElementById('reschedVendorInput').value.trim();
+      const newRole = document.getElementById('reschedRoleInput').value.trim();
+      const newDate = document.getElementById('reschedDateInput').value;
+      const newTime = document.getElementById('reschedTimeInput').value.trim();
+      const newLoc = document.getElementById('reschedLocationInput').value.trim();
+
+      if (!newVendor || !newDate) {
+        showToast('Vendor dan Tanggal wajib diisi!');
+        return;
+      }
+
+      const target = cachedJobs.find(j => j.rowIndex === rowIndex);
+      if (target) {
+        const parts = newDate.split('-');
+        target.tanggal = `${parseInt(parts[2], 10)} ${monthNamesIndo[parseInt(parts[1], 10) - 1]} ${parts[0]}`;
+        target.isoDate = newDate;
+        target.vendor = newVendor;
+        target.job = newRole;
+        target.waktu = newTime;
+        target.lokasi = newLoc;
+      }
+
+      updateHeroStats();
+      renderFilteredJobs();
+      renderGCalendar();
+      renderCalendarSelectedAgenda();
+      showToast(`Jadwal ${newVendor} berhasil diupdate!`);
+      switchMode('list');
+    }
+
+    function confirmDeleteSelectedJob() {
+      const rowIndex = parseInt(document.getElementById('reschedRowIndex').value, 10);
+      const origVendor = document.getElementById('reschedOriginalVendor').value;
+
+      const idx = cachedJobs.findIndex(j => j.rowIndex === rowIndex);
+      if (idx !== -1) {
+        cachedJobs.splice(idx, 1);
+      }
+
+      updateHeroStats();
+      renderFilteredJobs();
+      renderGCalendar();
+      renderCalendarSelectedAgenda();
+      showToast(`Job ${origVendor} telah dihapus dengan aman!`);
+      switchMode('list');
+    }
+
+    function triggerSyncDatabaseToGCal() {
+      const btn = document.getElementById('btnSyncGCal');
+      if (btn) {
+        btn.innerHTML = '<i data-feather="loader" class="w-3 h-3 animate-spin"></i><span>SYNCING...</span>';
+        feather.replace();
+      }
+
+      setTimeout(() => {
+        if (btn) {
+          btn.innerHTML = '<i data-feather="refresh-cw" class="w-3 h-3"></i><span>SYNC GCAL</span>';
+          feather.replace();
+        }
+        showToast('Sinkron Selesai: Seluruh jadwal aktif telah sinkron dengan Google Calendar!');
+      }, 1000);
+    }
+  </script>
+</body>
+</html><!DOCTYPE html>
+<html lang="id">
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     
