@@ -79,7 +79,7 @@
         <!-- ============================================================== -->
         <div id="sectionList" class="space-y-4">
 
-            <!-- Hero Dark Card (Mirip Ringkasan Keuangan) -->
+            <!-- Hero Dark Card (Ringkasan Sesi) -->
             <div class="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950 rounded-[28px] p-5 text-white shadow-xl shadow-slate-900/10 relative overflow-hidden">
                 <div class="absolute -right-8 -bottom-8 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none"></div>
                 
@@ -88,7 +88,10 @@
                         <i class="fa-solid fa-briefcase text-emerald-400"></i>
                         <span id="saldoHeroLabel">TOTAL SESI (SEMUA WAKTU)</span>
                     </div>
-                    <span class="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-white/10 text-emerald-300 tracking-wider">SYNC GCAL</span>
+                    <!-- Tombol Sinkronisasi Database ke GCal -->
+                    <button onclick="triggerSyncDatabaseToGCal()" id="btnSyncGCalHeader" class="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 tracking-wider hover:bg-emerald-500 hover:text-white active:scale-95 transition flex items-center gap-1">
+                        <i class="fa-solid fa-rotate text-[10px]"></i> SYNC GCAL
+                    </button>
                 </div>
 
                 <div class="flex items-baseline gap-2 mb-4">
@@ -658,87 +661,124 @@
         let selectedCalDateISO = getTodayISOString();
 
         // ==============================================================
-        // SWITCH TAB MODE & CALENDAR VIEW
+        // NAVIGASI MODES (LIST, NEW, RESCHEDULE, PROFILE)
         // ==============================================================
         function switchMode(mode) {
             currentMode = mode;
-            ['sectionList', 'sectionNew', 'sectionResched', 'sectionProfile'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.classList.add('hidden');
-            });
+            const sections = {
+                'list': 'sectionList',
+                'new': 'sectionNew',
+                'reschedule': 'sectionResched',
+                'profile': 'sectionProfile'
+            };
 
-            // Reset status ikon navigasi bawah
-            ['navBtnList', 'navBtnNew', 'navBtnResched', 'navBtnProfile'].forEach(id => {
-                const btn = document.getElementById(id);
+            const titles = {
+                'list': 'Jadwal Freelance',
+                'new': 'Tambah Job Baru',
+                'reschedule': 'Reschedule Job',
+                'profile': 'Profil Freelance'
+            };
+
+            const navBtns = {
+                'list': 'navBtnList',
+                'new': 'navBtnNew',
+                'reschedule': 'navBtnResched',
+                'profile': 'navBtnProfile'
+            };
+
+            // Switch Visibility
+            for (const key in sections) {
+                const el = document.getElementById(sections[key]);
+                if (el) el.classList.toggle('hidden', key !== mode);
+
+                const btn = document.getElementById(navBtns[key]);
                 if (btn) {
-                    btn.classList.remove('text-emerald-700');
-                    btn.classList.add('text-slate-400');
+                    if (key === mode) {
+                        btn.className = "flex flex-col items-center justify-center py-1 rounded-xl text-emerald-700 transition active:scale-90";
+                    } else {
+                        btn.className = "flex flex-col items-center justify-center py-1 rounded-xl text-slate-400 hover:text-slate-700 transition active:scale-90";
+                    }
                 }
-            });
-
-            if (mode === 'list') {
-                document.getElementById('sectionList')?.classList.remove('hidden');
-                document.getElementById('navBtnList')?.classList.add('text-emerald-700');
-                document.getElementById('navBtnList')?.classList.remove('text-slate-400');
-            } else if (mode === 'new') {
-                document.getElementById('sectionNew')?.classList.remove('hidden');
-                document.getElementById('navBtnNew')?.classList.add('text-emerald-700');
-                document.getElementById('navBtnNew')?.classList.remove('text-slate-400');
-            } else if (mode === 'reschedule') {
-                document.getElementById('sectionResched')?.classList.remove('hidden');
-                document.getElementById('navBtnResched')?.classList.add('text-emerald-700');
-                document.getElementById('navBtnResched')?.classList.remove('text-slate-400');
-                showAllJobsList();
-            } else if (mode === 'profile') {
-                document.getElementById('sectionProfile')?.classList.remove('hidden');
-                document.getElementById('navBtnProfile')?.classList.add('text-emerald-700');
-                document.getElementById('navBtnProfile')?.classList.remove('text-slate-400');
-                updateProfileStats();
             }
-        }
 
-        function switchCalendarView(subView) {
-            currentCalendarSubView = subView;
-            const subList = document.getElementById('subViewList');
-            const subCal = document.getElementById('subViewCalendar');
-            const btnList = document.getElementById('viewModeListBtn');
-            const btnCal = document.getElementById('viewModeCalBtn');
+            const headerTitle = document.getElementById('headerTitle');
+            if (headerTitle && titles[mode]) {
+                headerTitle.textContent = titles[mode];
+            }
 
-            if (subView === 'list') {
-                subList?.classList.remove('hidden');
-                subCal?.classList.add('hidden');
-                btnList.className = "flex-1 py-1.5 text-xs font-bold rounded-xl transition bg-white text-slate-900 shadow-sm flex items-center justify-center gap-1.5";
-                btnCal.className = "flex-1 py-1.5 text-xs font-bold rounded-xl transition text-slate-600 hover:text-slate-900 flex items-center justify-center gap-1.5";
-                renderFilteredJobs();
-            } else {
-                subList?.classList.add('hidden');
-                subCal?.classList.remove('hidden');
-                btnCal.className = "flex-1 py-1.5 text-xs font-bold rounded-xl transition bg-white text-slate-900 shadow-sm flex items-center justify-center gap-1.5";
-                btnList.className = "flex-1 py-1.5 text-xs font-bold rounded-xl transition text-slate-600 hover:text-slate-900 flex items-center justify-center gap-1.5";
-                
-                // Jika kalender belum berada di bulan yang memiliki job, selaraskan otomatis
-                alignCalendarToFirstAvailableJob();
+            if (mode === 'list' && currentCalendarSubView === 'calendar') {
                 renderGCalendar();
             }
         }
 
-        function alignCalendarToFirstAvailableJob() {
-            if (!cachedJobs || cachedJobs.length === 0) return;
-            const todayStr = getTodayISOString();
-            
-            // Urutkan tanggal job
-            const validDates = cachedJobs
-                .map(j => getJobISODate(j))
-                .filter(iso => /^\d{4}-\d{2}-\d{2}$/.test(iso))
-                .sort();
+        // Switch View Antara List dan Kalender GCal
+        function switchCalendarView(view) {
+            currentCalendarSubView = view;
+            const isCal = (view === 'calendar');
 
-            if (validDates.length > 0) {
-                // Prioritaskan tanggal hari ini jika ada job, atau job mendatang terdekat
-                const targetIso = validDates.find(d => d >= todayStr) || validDates[0];
-                const [y, m, d] = targetIso.split('-');
-                currentCalYear = parseInt(y, 10);
-                currentCalMonth = parseInt(m, 10) - 1;
-                selectedCalDateISO = targetIso;
+            document.getElementById('subViewList').classList.toggle('hidden', isCal);
+            document.getElementById('subViewCalendar').classList.toggle('hidden', !isCal);
+
+            const btnList = document.getElementById('viewModeListBtn');
+            const btnCal = document.getElementById('viewModeCalBtn');
+
+            if (isCal) {
+                btnCal.className = "flex-1 py-1.5 text-xs font-bold rounded-xl transition bg-white text-slate-900 shadow-sm flex items-center justify-center gap-1.5";
+                btnList.className = "flex-1 py-1.5 text-xs font-bold rounded-xl transition text-slate-600 hover:text-slate-900 flex items-center justify-center gap-1.5";
+                renderGCalendar();
+            } else {
+                btnList.className = "flex-1 py-1.5 text-xs font-bold rounded-xl transition bg-white text-slate-900 shadow-sm flex items-center justify-center gap-1.5";
+                btnCal.className = "flex-1 py-1.5 text-xs font-bold rounded-xl transition text-slate-600 hover:text-slate-900 flex items-center justify-center gap-1.5";
+                renderFilteredJobs();
+            }
+        }
+
+        function onPickerChange(formType) {
+            if (formType === 'new') {
+                const iso = document.getElementById('pickerTanggalBaru').value;
+                document.getElementById('previewTanggalBaru').textContent = formatPickerToIndonesianDate(iso);
+            } else if (formType === 'resched') {
+                const iso = document.getElementById('pickerTanggalResched').value;
+                document.getElementById('previewTanggalResched').textContent = formatPickerToIndonesianDate(iso);
+            }
+        }
+
+        // ==============================================================
+        // SINKRONISASI DATABASE SPREADSHEET KE GOOGLE CALENDAR
+        // ==============================================================
+        async function triggerSyncDatabaseToGCal() {
+            const scriptUrl = getActiveScriptUrl();
+            if (!scriptUrl || scriptUrl.includes('CONTOH_GANTI')) return openModalSettings();
+
+            const btn = document.getElementById('btnSyncGCalHeader');
+            const originalHtml = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-[10px]"></i> SYNCING...';
+            }
+
+            showToast('Memproses sinkronisasi ke Google Calendar...');
+
+            try {
+                await fetch(scriptUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: "sync_all_to_gcal"
+                    })
+                });
+
+                showToast('Jadwal Spreadsheet berhasil disinkronkan ke Google Calendar!');
+                await loadJobs(false);
+            } catch (err) {
+                console.error("Gagal sinkronisasi GCal:", err);
+                showToast('Gagal menyinkronkan ke Google Calendar');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalHtml;
+                }
             }
         }
 
@@ -1621,7 +1661,6 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         action: "reschedule",
-                        // Parameter spesifik jadwal asli agar 100% tepat sasaran
                         rowIndex: selectedJob.rowIndex !== undefined ? selectedJob.rowIndex : '',
                         originalVendor: selectedJob.vendor,
                         originalJob: selectedJob.job,
@@ -1629,7 +1668,6 @@
                         originalIsoDate: getJobISODate(selectedJob),
                         originalWaktu: selectedJob.waktu || '',
                         originalLokasi: selectedJob.lokasi || '',
-                        // Data pembaruan
                         vendorBaru: vendorBaru,
                         tanggalBaru: tanggalBaruFormatted,
                         isoDateBaru: isoDateBaru,
@@ -1837,7 +1875,7 @@
         window.onload = function() {
             loadProfileData();
             updatePeriodSelectorUI();
-            renderGCalendar(); // Inisialisasi awal struktur kalender
+            renderGCalendar();
             const activeUrl = getActiveScriptUrl();
             if (activeUrl && !activeUrl.includes('CONTOH_GANTI')) {
                 loadJobs(false);
