@@ -13,14 +13,13 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#181d26">
 
-    <!-- App Icon Khusus iOS Homescreen (Hi-Res PNG Canvas Generator) -->
+    <!-- App Icon Khusus iOS Homescreen -->
     <link rel="apple-touch-icon" id="dynamicAppleIcon" href="">
     <link rel="icon" id="dynamicFavicon" href="">
 
     <!-- Web App Manifest -->
     <link rel="manifest" href="data:application/manifest+json;charset=utf-8,%7B%22name%22%3A%22Freelance%20Tracker%22%2C%22short_name%22%3A%22Freelance%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23181d26%22%2C%22theme_color%22%3A%22%23181d26%22%7D">
 
-    <!-- Standalone Enforcer: Mencegah iOS Safari menampilkan Toolbar -->
     <script>
         (function() {
             try {
@@ -28,24 +27,17 @@
                 canvas.width = 180;
                 canvas.height = 180;
                 const ctx = canvas.getContext('2d');
-                
-                // Background Gelap Rounded
                 ctx.fillStyle = '#0f172a';
                 ctx.fillRect(0, 0, 180, 180);
-                
-                // Aksen Badge Hijau Emerald
                 ctx.fillStyle = '#10b981';
                 ctx.beginPath();
                 ctx.roundRect ? ctx.roundRect(40, 50, 100, 75, 18) : ctx.rect(40, 50, 100, 75);
                 ctx.fill();
-
-                // Gagang Koper
                 ctx.strokeStyle = '#34d399';
                 ctx.lineWidth = 10;
                 ctx.beginPath();
                 ctx.roundRect ? ctx.roundRect(65, 32, 50, 30, 8) : ctx.rect(65, 32, 50, 30);
                 ctx.stroke();
-
                 const iconUrl = canvas.toDataURL('image/png');
                 document.getElementById('dynamicAppleIcon')?.setAttribute('href', iconUrl);
                 document.getElementById('dynamicFavicon')?.setAttribute('href', iconUrl);
@@ -132,11 +124,11 @@
                 </div>
             </div>
 
-            <!-- Indikator Dua Kolom -->
+            <!-- Indikator Dua Kolom (Ikon FontAwesome 6 Valid) -->
             <div class="grid grid-cols-2 gap-2.5 pt-1">
                 <div class="bg-slate-800/60 border border-slate-700/50 p-2.5 rounded-xl flex items-center gap-2">
                     <div class="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs">
-                        <i class="fa-solid fa-arrow-down-left"></i>
+                        <i class="fa-regular fa-calendar-check"></i>
                     </div>
                     <div class="overflow-hidden">
                         <span class="text-[9px] font-bold text-slate-400 uppercase block tracking-wider">MENDATANG</span>
@@ -146,7 +138,7 @@
 
                 <div class="bg-slate-800/60 border border-slate-700/50 p-2.5 rounded-xl flex items-center gap-2">
                     <div class="w-7 h-7 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs">
-                        <i class="fa-solid fa-arrow-up-right"></i>
+                        <i class="fa-solid fa-check-double"></i>
                     </div>
                     <div class="overflow-hidden">
                         <span class="text-[9px] font-bold text-slate-400 uppercase block tracking-wider">SELESAI</span>
@@ -263,7 +255,6 @@
         <!-- TAB 2: FORM TAMBAH JADWAL BARU                                  -->
         <!-- ============================================================== -->
         <div id="sectionNew" class="space-y-3 hidden">
-            <!-- Box Paste & Ekstrak Brief Chat -->
             <div class="bg-white p-4 rounded-[24px] border border-slate-200/90 shadow-sm space-y-2.5">
                 <div class="flex justify-between items-center">
                     <label class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
@@ -280,7 +271,6 @@
                 </button>
             </div>
 
-            <!-- Box Input Jadwal Baru Ramping -->
             <div class="bg-white p-4 rounded-[24px] border border-slate-200/90 shadow-sm space-y-3">
                 <div class="flex items-center justify-between border-b border-slate-100 pb-2">
                     <h2 class="font-bold text-slate-900 text-xs flex items-center gap-1.5">
@@ -333,7 +323,6 @@
                 </div>
             </div>
 
-            <!-- FORM RESCHEDULE -->
             <div id="rescheduleFormFields" class="space-y-2.5 hidden">
                 <input type="hidden" id="reschedRowIndex">
                 <input type="hidden" id="reschedOriginalVendor">
@@ -376,7 +365,6 @@
                 </div>
             </div>
 
-            <!-- Info Card Job Terpilih Sebagai Pembanding -->
             <div id="selectedJobCard" class="p-3 bg-slate-50 border border-slate-200 rounded-2xl hidden space-y-1.5 text-xs">
                 <div class="flex justify-between items-center border-b border-slate-200/70 pb-1">
                     <span class="text-[9px] font-bold uppercase text-slate-400 tracking-wider">Jadwal Asli Terdaftar:</span>
@@ -390,7 +378,6 @@
                 </div>
             </div>
 
-            <!-- Search / Pilih Job Dropdown -->
             <div class="relative pt-1">
                 <label class="text-[9px] text-slate-400 uppercase font-extrabold block mb-1">Cari / Pilih Vendor Terdaftar</label>
                 <div class="relative">
@@ -442,6 +429,15 @@
                 <button onclick="openModalSettings()" class="p-3 bg-white hover:bg-slate-50 active:scale-95 text-slate-800 border border-slate-200/90 rounded-2xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition">
                     <i class="fa-solid fa-sliders text-slate-600"></i> Konfigurasi
                 </button>
+            </div>
+
+            <!-- Panel Diagnostik Pembacaan Tanggal Spreadsheet -->
+            <div class="bg-white p-4 rounded-[24px] border border-slate-200/90 shadow-sm space-y-1.5 text-[11px]">
+                <div class="font-bold text-slate-800 flex items-center justify-between">
+                    <span>Status Parser Tanggal GCal</span>
+                    <span class="text-[10px] px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-md font-bold">v2.5 Auto-Detect</span>
+                </div>
+                <p id="diagDateInfo" class="text-slate-500 font-mono text-[10px] leading-relaxed">Memeriksa format tanggal dari Google Sheets...</p>
             </div>
         </div>
 
@@ -646,9 +642,9 @@
         const MONTH_MAP = {
             'januari': 0, 'jan': 0, 'februari': 1, 'feb': 1, 'maret': 2, 'mar': 2,
             'april': 3, 'apr': 3, 'mei': 4, 'may': 4, 'juni': 5, 'jun': 5,
-            'juli': 6, 'jul': 6, 'agustus': 7, 'agu': 7, 'agt': 7, 'aug': 7,
-            'september': 8, 'sep': 8, 'oktober': 9, 'okt': 9, 'oct': 9,
-            'november': 10, 'nov': 10, 'desember': 11, 'des': 11, 'dec': 11
+            'juli': 6, 'jul': 6, 'agustus': 7, 'agu': 7, 'agt': 7, 'aug': 7, 'ags': 7,
+            'september': 8, 'sep': 8, 'sept': 8, 'oktober': 9, 'okt': 9, 'oct': 9,
+            'november': 10, 'nov': 10, 'nopember': 10, 'nop': 10, 'desember': 11, 'des': 11, 'dec': 11
         };
 
         let cachedJobs = [];
@@ -665,7 +661,7 @@
         let currentListViewMode = 'list';
         let calCurrentYear = 2026;
         let calCurrentMonth = 10; // Default November 2026
-        let calSelectedDate = '2026-11-04';
+        let calSelectedDate = '2026-11-05';
 
         function getActiveScriptUrl() {
             return localStorage.getItem('freelance_script_url') || DEFAULT_SCRIPT_URL;
@@ -674,7 +670,7 @@
         // Generator Data Fallback Realistis (Jika Preview Diblokir Sandbox CORS)
         function generatePreviewFallbackJobs() {
             const list = [
-                { rowIndex: 2, tanggal: "4 November 2026", vendor: "Luxuraimage Studio", job: "Video Wedding", waktu: "07.00 - 14.00", lokasi: "Royal Ambarrukmo", isoDate: "2026-11-04" },
+                { rowIndex: 2, tanggal: "5 November 2026", vendor: "Luxuraimage Studio", job: "Video Wedding", waktu: "07.00 - 14.00", lokasi: "Royal Ambarrukmo", isoDate: "2026-11-05" },
                 { rowIndex: 3, tanggal: "7 November 2026", vendor: "Takimoto.co", job: "Video Wedding", waktu: "07.00 - 14.00", lokasi: "Kulonprogo", isoDate: "2026-11-07" },
                 { rowIndex: 4, tanggal: "7 November 2026", vendor: "Moment Bersama", job: "Foto Wisuda", waktu: "14.30 - 17.00", lokasi: "GSP UGM", isoDate: "2026-11-07" },
                 { rowIndex: 5, tanggal: "12 November 2026", vendor: "Framelens Production", job: "Video Dokumentasi", waktu: "08.00 - 15.00", lokasi: "Marriott Jogja", isoDate: "2026-11-12" },
@@ -684,7 +680,6 @@
                 { rowIndex: 9, tanggal: "25 November 2026", vendor: "Widya Grad", job: "Foto Wisuda", waktu: "07.30 - 11.30", lokasi: "Grha Sabha Pramana", isoDate: "2026-11-25" },
                 { rowIndex: 10, tanggal: "28 November 2026", vendor: "Nusantara Visual", job: "Video Wedding", waktu: "08.00 - 17.00", lokasi: "Sheraton Mustika", isoDate: "2026-11-28" }
             ];
-            // Tambahkan sisa sesi mendatang & selesai agar total 145 sesi (37 Mendatang, 108 Selesai)
             for (let i = 1; i <= 28; i++) {
                 const day = ((i * 2) % 28) + 1;
                 const dStr = String(day).padStart(2, '0');
@@ -715,25 +710,59 @@
         }
 
         // =========================================================================
-        // DEEP DATE SCANNER & NORMALIZER (ANTI GAGAL PARSE TANGGAL SPREADSHEET)
+        // DEEP DATE SCANNER & NORMALIZER (MENDUKUNG ARRAY MAUPUN OBJEK DARI SHEET)
         // =========================================================================
         function normalizeJobObject(raw, idx) {
-            if (!raw || typeof raw !== 'object') return null;
+            if (!raw) return null;
 
-            const vendor = raw.vendor || raw.Vendor || raw.VENDOR || raw.klien || raw.Klien || raw.client || "";
-            const jobTitle = raw.job || raw.Job || raw.JOB || raw.role || raw.Role || raw.pekerjaan || raw.acara || "";
-            const waktu = raw.waktu || raw.Waktu || raw.WAKTU || raw.jam || raw.Jam || raw.time || "";
-            const lokasi = raw.lokasi || raw.Lokasi || raw.LOKASI || raw.tempat || raw.Tempat || raw.venue || "";
-            const rawTanggal = raw.tanggal || raw.Tanggal || raw.TANGGAL || raw.date || raw.Date || raw.tgl || raw.Tgl || "";
+            // Jika Apps Script mengembalikan baris sebagai Array [tanggal, vendor, job, waktu, lokasi]
+            if (Array.isArray(raw)) {
+                const objFromArr = {
+                    rowIndex: idx + 2,
+                    tanggal: String(raw[0] || "").trim(),
+                    vendor: String(raw[1] || "").trim(),
+                    job: String(raw[2] || "").trim(),
+                    waktu: String(raw[3] || "").trim(),
+                    lokasi: String(raw[4] || "").trim()
+                };
+                objFromArr.isoDate = extractDateFromAnyJobField(objFromArr);
+                return objFromArr;
+            }
+
+            if (typeof raw !== 'object') return null;
+
+            // Cari key secara case-insensitive
+            let vendor = "", jobTitle = "", waktu = "", lokasi = "", rawTanggal = "";
+            for (const k in raw) {
+                const lowerK = k.toLowerCase().trim();
+                const val = raw[k];
+                if (lowerK.includes('vendor') || lowerK.includes('klien') || lowerK.includes('client') || lowerK.includes('nama')) {
+                    if (!vendor) vendor = val;
+                } else if (lowerK.includes('job') || lowerK.includes('role') || lowerK.includes('pekerjaan') || lowerK.includes('acara') || lowerK.includes('paket')) {
+                    if (!jobTitle) jobTitle = val;
+                } else if (lowerK.includes('waktu') || lowerK.includes('jam') || lowerK.includes('time') || lowerK.includes('sesi')) {
+                    if (!waktu) waktu = val;
+                } else if (lowerK.includes('lokasi') || lowerK.includes('tempat') || lowerK.includes('venue') || lowerK.includes('alamat')) {
+                    if (!lokasi) lokasi = val;
+                } else if (lowerK.includes('tanggal') || lowerK.includes('tgl') || lowerK.includes('date') || lowerK.includes('hari')) {
+                    if (!rawTanggal) rawTanggal = val;
+                }
+            }
+
+            // Fallback jika nama key berbeda
+            const vals = Object.values(raw);
+            if (!rawTanggal && vals.length >= 1) rawTanggal = raw.tanggal || raw.date || vals[0] || "";
+            if (!vendor && vals.length >= 2) vendor = raw.vendor || vals[1] || "";
+            if (!jobTitle && vals.length >= 3) jobTitle = raw.job || vals[2] || "";
 
             const normalized = {
                 ...raw,
                 rowIndex: raw.rowIndex || (idx + 2),
-                vendor: String(vendor).trim(),
-                job: String(jobTitle).trim(),
-                waktu: String(waktu).trim(),
-                lokasi: String(lokasi).trim(),
-                tanggal: String(rawTanggal).trim()
+                vendor: String(vendor || "").trim(),
+                job: String(jobTitle || "").trim(),
+                waktu: String(waktu || "").trim(),
+                lokasi: String(lokasi || "").trim(),
+                tanggal: String(rawTanggal || "").trim()
             };
 
             const iso = extractDateFromAnyJobField(normalized);
@@ -749,7 +778,6 @@
         function extractDateFromAnyJobField(job) {
             if (!job || typeof job !== 'object') return "";
 
-            // 1. Cek properti tanggal utama
             const candidates = [
                 job.isoDate, job.tanggal, job.Tanggal, job.TANGGAL,
                 job.date, job.Date, job.tgl, job.Tgl
@@ -761,11 +789,10 @@
                 if (parsed) return parsed;
             }
 
-            // 2. Pindai seluruh kolom jika nama kolom tidak standar
             for (const key in job) {
                 if (key === 'rowIndex' || key === 'waktu' || key === 'Waktu') continue;
                 const val = String(job[key] || "").trim();
-                if (!val || val.length < 4) continue;
+                if (!val || val.length < 3) continue;
                 const parsed = parseFreeTextToISODate(val);
                 if (parsed) return parsed;
             }
@@ -779,18 +806,25 @@
                 return `${str.getFullYear()}-${String(str.getMonth() + 1).padStart(2, '0')}-${String(str.getDate()).padStart(2, '0')}`;
             }
 
-            // Bersihkan underscore & nama hari di awal teks (Senin, Selasa, Minggu, dll)
+            // Jika berupa angka serial tanggal Google Sheets (misal 46333)
+            if (typeof str === 'number' && str > 40000 && str < 60000) {
+                const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+                const dObj = new Date(excelEpoch.getTime() + str * 86400000);
+                return `${dObj.getUTCFullYear()}-${String(dObj.getUTCMonth() + 1).padStart(2, '0')}-${String(dObj.getUTCDate()).padStart(2, '0')}`;
+            }
+
             let s = String(str).trim()
                 .replace(/_/g, ' ')
                 .replace(/^(senin|selasa|rabu|kamis|jumat|jum'at|sabtu|minggu|ahad|mon|tue|wed|thu|fri|sat|sun)\s*[,.\-\/]?\s*/i, '');
 
             if (!s) return "";
 
-            // 1. Format ISO Timestamp dari Google Sheets (misal: 2026-11-06T17:00:00.000Z)
-            if (s.includes('T') && /^\d{4}-\d{2}-\d{2}T/.test(s)) {
+            // 1. Format ISO Timestamp dari Google Sheets (Konversi ke WIB / GMT+7 agar tanggal tidak mundur 1 hari)
+            if (s.includes('T') && /\d{4}-\d{2}-\d{2}T/.test(s)) {
                 const dObj = new Date(s);
                 if (!isNaN(dObj.getTime())) {
-                    return `${dObj.getFullYear()}-${String(dObj.getMonth() + 1).padStart(2, '0')}-${String(dObj.getDate()).padStart(2, '0')}`;
+                    const wibTime = new Date(dObj.getTime() + (7 * 60 * 60 * 1000));
+                    return `${wibTime.getUTCFullYear()}-${String(wibTime.getUTCMonth() + 1).padStart(2, '0')}-${String(wibTime.getUTCDate()).padStart(2, '0')}`;
                 }
             }
 
@@ -803,10 +837,9 @@
                 return `${y}-${m}-${d}`;
             }
 
-            // 3. Format Teks Bulan Indonesia / Inggris (Dengan Tahun maupun Tanpa Tahun)
+            // 3. Format Teks Bulan Indonesia / Inggris (Contoh: "7 November 2026", "07 Nov 26", "7-Nov-2026", "7 November")
             const monthNamesPattern = Object.keys(MONTH_MAP).join('|');
-            // Pola: "7 November 2026", "07 Nov 26", "7 November"
-            const regexIndo1 = new RegExp(`\\b(\\d{1,2})\\s*[\\-\\/\\.,\\s]+\\s*(${monthNamesPattern})\\b(?:\\s*[\\-\\/\\.,\\s]*\\s*(\\d{2,4}))?`, 'i');
+            const regexIndo1 = new RegExp(`(\\d{1,2})\\s*[\\-\\/\\.,\\s]*\\s*(${monthNamesPattern})\\b(?:\\s*[\\-\\/\\.,\\s]*\\s*(\\d{2,4}))?`, 'i');
             const m1 = s.match(regexIndo1);
             if (m1) {
                 const day = String(parseInt(m1[1], 10)).padStart(2, '0');
@@ -819,7 +852,7 @@
             }
 
             // Pola: "November 7, 2026"
-            const regexIndo2 = new RegExp(`\\b(${monthNamesPattern})\\s+(\\d{1,2})(?:\\s*[,\\-\\/\\s]+\\s*(\\d{2,4}))?`, 'i');
+            const regexIndo2 = new RegExp(`\\b(${monthNamesPattern})\\s*[\\-\\/\\.,\\s]*\\s*(\\d{1,2})(?:\\s*[,\\-\\/\\s]+\\s*(\\d{2,4}))?`, 'i');
             const m2 = s.match(regexIndo2);
             if (m2) {
                 const mKey = m2[1].toLowerCase();
@@ -938,6 +971,31 @@
             const d = String(today.getDate()).padStart(2, '0');
             calSelectedDate = `${y}-${m}-${d}`;
             renderGCalendar();
+        }
+
+        function autoAlignCalendarToAvailableMonth() {
+            if (!cachedJobs || cachedJobs.length === 0) return;
+            const currentMonthPrefix = `${calCurrentYear}-${String(calCurrentMonth + 1).padStart(2, '0')}`;
+            const hasInCurrentMonth = cachedJobs.some(j => {
+                const det = getJobDateDetails(j);
+                return det.isoDate && det.isoDate.startsWith(currentMonthPrefix);
+            });
+            if (hasInCurrentMonth) return;
+
+            // Cari jadwal mendatang terdekat, atau jadwal terbaru jika semua lampau
+            const validDates = cachedJobs
+                .map(j => getJobDateDetails(j).isoDate)
+                .filter(iso => iso && /^\d{4}-\d{2}-\d{2}$/.test(iso))
+                .sort();
+
+            if (validDates.length > 0) {
+                const todayISO = new Date().toISOString().split('T')[0];
+                const nextUpcoming = validDates.find(d => d >= todayISO) || validDates[validDates.length - 1];
+                const [y, m, d] = nextUpcoming.split('-');
+                calCurrentYear = parseInt(y, 10);
+                calCurrentMonth = parseInt(m, 10) - 1;
+                calSelectedDate = nextUpcoming;
+            }
         }
 
         function renderGCalendar() {
@@ -1151,7 +1209,15 @@
                     cachedJobs = loadedList
                         .map((j, idx) => normalizeJobObject(j, idx))
                         .filter(j => j && (j.vendor || j.tanggal || j.job));
-                    if (showToastNotice) showToast(`Tersinkron: ${cachedJobs.length} job`);
+
+                    const validCount = cachedJobs.filter(j => j.isoDate).length;
+                    const sampleRaw = loadedList[0] ? JSON.stringify(loadedList[0]).slice(0, 120) : '';
+                    const diagEl = document.getElementById('diagDateInfo');
+                    if (diagEl) {
+                        diagEl.textContent = `Terbaca ${validCount}/${cachedJobs.length} tanggal valid. Sampel baris 1: ${sampleRaw}`;
+                    }
+
+                    if (showToastNotice) showToast(`Tersinkron: ${cachedJobs.length} job (${validCount} tgl aktif)`);
                 } else {
                     if (cachedJobs.length === 0) cachedJobs = generatePreviewFallbackJobs();
                     if (showToastNotice) showToast('Data kosong di Spreadsheet');
@@ -1161,10 +1227,15 @@
                 if (cachedJobs.length === 0) {
                     cachedJobs = generatePreviewFallbackJobs();
                 }
+                const diagEl = document.getElementById('diagDateInfo');
+                if (diagEl) {
+                    diagEl.textContent = `Mode Preview Aktif (${cachedJobs.length} sampel sesi jadwal).`;
+                }
                 if (showToastNotice) showToast('Mode Preview Aktif');
             } finally {
                 if (topBtn) topBtn.innerHTML = '<i class="fa-solid fa-arrow-rotate-right text-xs"></i>';
                 populateYearModalOptions();
+                autoAlignCalendarToAvailableMonth();
                 updateHeroCardSummary();
                 renderFilteredJobs();
                 renderGCalendar();
@@ -1611,7 +1682,6 @@
             btn.disabled = true;
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Mengupdate...';
 
-            // Update memori lokal khusus hanya untuk baris & tanggal yang diedit
             const targetIdx = cachedJobs.findIndex(j => 
                 (rowIndex && String(j.rowIndex) === String(rowIndex)) ||
                 (j.vendor === origVendor && j.tanggal === origDate && (j.waktu || '') === origTime)
@@ -1686,7 +1756,6 @@
             const targetDate = selectedJob.tanggal;
             const targetTime = selectedJob.waktu || '';
 
-            // Hapus hanya 1 item di memori lokal yang cocok dengan rowIndex atau kombinasi vendor+tanggal+waktu
             const delIdx = cachedJobs.findIndex(j => 
                 (rowIndex && String(j.rowIndex) === String(rowIndex)) ||
                 (j.vendor === targetVendor && j.tanggal === targetDate && (j.waktu || '') === targetTime)
