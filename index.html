@@ -333,7 +333,7 @@
                         <button id="btnSubmitResched" onclick="submitReschedule()" class="flex-1 py-2.5 bg-emerald-700 hover:bg-emerald-800 active:scale-98 text-white font-bold text-xs rounded-xl transition shadow flex items-center justify-center gap-1.5">
                             <i class="fa-solid fa-arrows-rotate"></i> Update di GCal & Sheet
                         </button>
-                        <button id="btnDeleteJob" onclick="confirmDeleteJob()" class="px-4 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 active:scale-98 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5">
+                        <button id="btnTriggerDeleteModal" onclick="confirmDeleteJob()" class="px-4 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 active:scale-98 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5">
                             <i class="fa-solid fa-trash-can"></i> Hapus
                         </button>
                     </div>
@@ -552,7 +552,7 @@
             </div>
             <div class="flex gap-2 pt-2">
                 <button onclick="closeConfirmDelete()" class="w-1/2 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition">Batal</button>
-                <button id="btnDeleteJob" onclick="executeDeleteJob()" class="w-1/2 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow transition">Hapus</button>
+                <button id="btnConfirmDeleteAction" onclick="executeDeleteJob()" class="w-1/2 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow transition">Hapus</button>
             </div>
         </div>
     </div>
@@ -642,11 +642,11 @@
         let batchDetectedJobs = [];
 
         // State Filter & Tampilan
-        let currentMode = 'list'; // 'list', 'new', 'reschedule', 'profile'
-        let currentCalendarSubView = 'list'; // 'list' | 'calendar'
-        let currentStatusFilter = 'all'; // 'all' | 'upcoming' | 'done'
+        let currentMode = 'list';
+        let currentCalendarSubView = 'list';
+        let currentStatusFilter = 'all';
         let currentSearchQuery = '';
-        let isShowAllJobs = false; // toggle limit 10 item
+        let isShowAllJobs = false;
 
         // State Rentang Waktu (Bulan & Tahun)
         let selectedPeriodYear = 'all';
@@ -657,205 +657,176 @@
         let currentCalMonth = new Date().getMonth();
         let selectedCalDateISO = getTodayISOString();
 
-        function getTodayISOString() {
-            const d = new Date();
-            const y = d.getFullYear();
-            const m = String(d.getMonth() + 1).padStart(2, '0');
-            const day = String(d.getDate()).padStart(2, '0');
-            return `${y}-${m}-${day}`;
-        }
-
-        function getActiveScriptUrl() {
-            return localStorage.getItem('freelance_script_url') || DEFAULT_SCRIPT_URL;
-        }
-
-        function formatPickerToIndonesianDate(isoStr) {
-            if (!isoStr) return "";
-            const [y, m, d] = isoStr.split('-');
-            const monthName = NAMA_BULAN_ID[parseInt(m, 10) - 1];
-            return `${parseInt(d, 10)} ${monthName} ${y}`;
-        }
-
-        function parseFreeTextToISODate(str) {
-            if (!str) return "";
-            const p = str.trim().split(/[\s\-\/\.]+/);
-            if (p.length >= 3) {
-                const day = String(parseInt(p[0], 10)).padStart(2, '0');
-                let monthVal = p[1].toLowerCase();
-                let mIndex = 0;
-
-                if (MONTH_MAP[monthVal] !== undefined) {
-                    mIndex = MONTH_MAP[monthVal];
-                } else if (!isNaN(monthVal)) {
-                    mIndex = parseInt(monthVal, 10) - 1;
-                }
-                const month = String(mIndex + 1).padStart(2, '0');
-
-                let year = p[2];
-                if (year.length === 2) year = '20' + year;
-
-                return `${year}-${month}-${day}`;
-            }
-            return "";
-        }
-
-        function getJobISODate(job) {
-            if (job.isoDate) return job.isoDate;
-            if (job.tanggal) {
-                const parsed = parseFreeTextToISODate(job.tanggal);
-                if (parsed) return parsed;
-            }
-            return "";
-        }
-
-        function onPickerChange(mode) {
-            if (mode === 'new') {
-                const val = document.getElementById('pickerTanggalBaru').value;
-                document.getElementById('previewTanggalBaru').textContent = formatPickerToIndonesianDate(val);
-            } else {
-                const val = document.getElementById('pickerTanggalResched').value;
-                document.getElementById('previewTanggalResched').textContent = formatPickerToIndonesianDate(val);
-            }
-        }
-
         // ==============================================================
-        // SWITCH MODE & NAVIGASI TAB
+        // SWITCH TAB MODE & CALENDAR VIEW
         // ==============================================================
         function switchMode(mode) {
             currentMode = mode;
-            const secList = document.getElementById('sectionList');
-            const secNew = document.getElementById('sectionNew');
-            const secResched = document.getElementById('sectionResched');
-            const secProfile = document.getElementById('sectionProfile');
-
-            if (secList) secList.classList.toggle('hidden', mode !== 'list');
-            if (secNew) secNew.classList.toggle('hidden', mode !== 'new');
-            if (secResched) secResched.classList.toggle('hidden', mode !== 'reschedule');
-            if (secProfile) secProfile.classList.toggle('hidden', mode !== 'profile');
-
-            const headerTitle = document.getElementById('headerTitle');
-            if (mode === 'list') headerTitle.textContent = "Jadwal Freelance";
-            else if (mode === 'new') headerTitle.textContent = "Tambah Jadwal";
-            else if (mode === 'reschedule') headerTitle.textContent = "Reschedule Job";
-            else if (mode === 'profile') headerTitle.textContent = "Profil Freelancer";
-
-            // Update warna tombol nav bawah
-            const tabs = ['List', 'New', 'Resched', 'Profile'];
-            tabs.forEach(t => {
-                const btn = document.getElementById(`navBtn${t}`);
-                if (!btn) return;
-                const isActive = t.toLowerCase() === (mode === 'reschedule' ? 'resched' : mode);
-                btn.className = isActive 
-                    ? "flex flex-col items-center justify-center py-1 rounded-xl text-emerald-700 transition active:scale-90"
-                    : "flex flex-col items-center justify-center py-1 rounded-xl text-slate-400 hover:text-slate-700 transition active:scale-90";
+            ['sectionList', 'sectionNew', 'sectionResched', 'sectionProfile'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.add('hidden');
             });
 
-            if (mode === 'reschedule') {
+            // Reset status ikon navigasi bawah
+            ['navBtnList', 'navBtnNew', 'navBtnResched', 'navBtnProfile'].forEach(id => {
+                const btn = document.getElementById(id);
+                if (btn) {
+                    btn.classList.remove('text-emerald-700');
+                    btn.classList.add('text-slate-400');
+                }
+            });
+
+            if (mode === 'list') {
+                document.getElementById('sectionList')?.classList.remove('hidden');
+                document.getElementById('navBtnList')?.classList.add('text-emerald-700');
+                document.getElementById('navBtnList')?.classList.remove('text-slate-400');
+            } else if (mode === 'new') {
+                document.getElementById('sectionNew')?.classList.remove('hidden');
+                document.getElementById('navBtnNew')?.classList.add('text-emerald-700');
+                document.getElementById('navBtnNew')?.classList.remove('text-slate-400');
+            } else if (mode === 'reschedule') {
+                document.getElementById('sectionResched')?.classList.remove('hidden');
+                document.getElementById('navBtnResched')?.classList.add('text-emerald-700');
+                document.getElementById('navBtnResched')?.classList.remove('text-slate-400');
                 showAllJobsList();
             } else if (mode === 'profile') {
+                document.getElementById('sectionProfile')?.classList.remove('hidden');
+                document.getElementById('navBtnProfile')?.classList.add('text-emerald-700');
+                document.getElementById('navBtnProfile')?.classList.remove('text-slate-400');
                 updateProfileStats();
             }
         }
 
         function switchCalendarView(subView) {
             currentCalendarSubView = subView;
-            const isList = subView === 'list';
-            document.getElementById('subViewList').classList.toggle('hidden', !isList);
-            document.getElementById('subViewCalendar').classList.toggle('hidden', isList);
+            const subList = document.getElementById('subViewList');
+            const subCal = document.getElementById('subViewCalendar');
+            const btnList = document.getElementById('viewModeListBtn');
+            const btnCal = document.getElementById('viewModeCalBtn');
 
-            document.getElementById('viewModeListBtn').className = isList 
-                ? "flex-1 py-1.5 text-xs font-bold rounded-xl transition bg-white text-slate-900 shadow-sm flex items-center justify-center gap-1.5"
-                : "flex-1 py-1.5 text-xs font-bold rounded-xl transition text-slate-600 hover:text-slate-900 flex items-center justify-center gap-1.5";
-
-            document.getElementById('viewModeCalBtn').className = !isList 
-                ? "flex-1 py-1.5 text-xs font-bold rounded-xl transition bg-white text-slate-900 shadow-sm flex items-center justify-center gap-1.5"
-                : "flex-1 py-1.5 text-xs font-bold rounded-xl transition text-slate-600 hover:text-slate-900 flex items-center justify-center gap-1.5";
-
-            if (!isList) {
+            if (subView === 'list') {
+                subList?.classList.remove('hidden');
+                subCal?.classList.add('hidden');
+                btnList.className = "flex-1 py-1.5 text-xs font-bold rounded-xl transition bg-white text-slate-900 shadow-sm flex items-center justify-center gap-1.5";
+                btnCal.className = "flex-1 py-1.5 text-xs font-bold rounded-xl transition text-slate-600 hover:text-slate-900 flex items-center justify-center gap-1.5";
+                renderFilteredJobs();
+            } else {
+                subList?.classList.add('hidden');
+                subCal?.classList.remove('hidden');
+                btnCal.className = "flex-1 py-1.5 text-xs font-bold rounded-xl transition bg-white text-slate-900 shadow-sm flex items-center justify-center gap-1.5";
+                btnList.className = "flex-1 py-1.5 text-xs font-bold rounded-xl transition text-slate-600 hover:text-slate-900 flex items-center justify-center gap-1.5";
+                
+                // Jika kalender belum berada di bulan yang memiliki job, selaraskan otomatis
+                alignCalendarToFirstAvailableJob();
                 renderGCalendar();
             }
         }
 
+        function alignCalendarToFirstAvailableJob() {
+            if (!cachedJobs || cachedJobs.length === 0) return;
+            const todayStr = getTodayISOString();
+            
+            // Urutkan tanggal job
+            const validDates = cachedJobs
+                .map(j => getJobISODate(j))
+                .filter(iso => /^\d{4}-\d{2}-\d{2}$/.test(iso))
+                .sort();
+
+            if (validDates.length > 0) {
+                // Prioritaskan tanggal hari ini jika ada job, atau job mendatang terdekat
+                const targetIso = validDates.find(d => d >= todayStr) || validDates[0];
+                const [y, m, d] = targetIso.split('-');
+                currentCalYear = parseInt(y, 10);
+                currentCalMonth = parseInt(m, 10) - 1;
+                selectedCalDateISO = targetIso;
+            }
+        }
+
         // ==============================================================
-        // LOAD DATA & STATISTIK DARI GOOGLE APPS SCRIPT
+        // FETCH DATA JOBS DARI GOOGLE APPS SCRIPT
         // ==============================================================
-        async function loadJobs(showToastNotice = true) {
+        async function loadJobs(forceToast = false) {
             const scriptUrl = getActiveScriptUrl();
             if (!scriptUrl || scriptUrl.includes('CONTOH_GANTI')) return;
 
-            const btn = document.getElementById('btnTopRefresh');
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-sm text-emerald-600"></i>';
+            const refreshBtn = document.getElementById('btnTopRefresh');
+            if (refreshBtn) refreshBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-sm"></i>';
 
             try {
-                const res = await fetch(scriptUrl);
+                const res = await fetch(`${scriptUrl}?t=${Date.now()}`);
                 const data = await res.json();
-                
-                let loadedArray = [];
-                if (Array.isArray(data)) {
-                    loadedArray = data;
-                } else if (data && data.jobs && Array.isArray(data.jobs)) {
-                    loadedArray = data.jobs;
-                } else if (data && data.data && Array.isArray(data.data)) {
-                    loadedArray = data.data;
+
+                if (data.status === 'success' && Array.isArray(data.jobs)) {
+                    cachedJobs = data.jobs;
+
+                    // Pastikan tiap job memiliki isoDate yang valid
+                    cachedJobs.forEach(job => {
+                        job.isoDate = getJobISODate(job);
+                    });
+
+                    updateHeroStats();
+                    populatePeriodYearOptions();
+                    renderFilteredJobs();
+                    renderGCalendar();
+                    updateProfileStats();
+
+                    if (forceToast) showToast(`Data berhasil disinkronkan (${cachedJobs.length} job)`);
+                } else {
+                    if (forceToast) showToast('Gagal memuat data dari spreadsheet');
                 }
-
-                cachedJobs = loadedArray;
-
-                // Update Hero Card & Badge
-                updateHeroStats();
-                populatePeriodYearOptions();
-                renderFilteredJobs();
-                if (currentCalendarSubView === 'calendar') renderGCalendar();
-                updateProfileStats();
-
-                if (showToastNotice) showToast(`Berhasil sinkron ${cachedJobs.length} sesi!`);
             } catch (err) {
-                console.error("Gagal load jobs:", err);
-                if (showToastNotice) showToast('Gagal memuat jadwal dari Google');
+                console.error("Gagal sinkronisasi data:", err);
+                if (forceToast) showToast('Koneksi terganggu');
             } finally {
-                btn.innerHTML = '<i class="fa-solid fa-rotate text-sm"></i>';
+                if (refreshBtn) refreshBtn.innerHTML = '<i class="fa-solid fa-rotate text-sm"></i>';
             }
         }
 
         function updateHeroStats() {
             const todayStr = getTodayISOString();
-            let upcomingCount = 0;
-            let doneCount = 0;
+            let upcoming = 0;
+            let done = 0;
 
             cachedJobs.forEach(job => {
                 const iso = getJobISODate(job);
-                if (!iso || iso >= todayStr) {
-                    upcomingCount++;
+                if (iso && iso < todayStr) {
+                    done++;
                 } else {
-                    doneCount++;
+                    upcoming++;
                 }
             });
 
             document.getElementById('heroJobCountDisplay').textContent = cachedJobs.length;
-            document.getElementById('heroUpcomingCount').textContent = `${upcomingCount} Sesi`;
-            document.getElementById('heroDoneCount').textContent = `${doneCount} Sesi`;
+            document.getElementById('heroUpcomingCount').textContent = `${upcoming} Sesi`;
+            document.getElementById('heroDoneCount').textContent = `${done} Sesi`;
             document.getElementById('navCountBadge').textContent = cachedJobs.length;
         }
 
-        // ==============================================================
-        // RENDER LIST JOB (FINTECH STYLE + PAGINATION 10)
-        // ==============================================================
         function setStatusFilter(status) {
             currentStatusFilter = status;
-            ['all', 'upcoming', 'done'].forEach(s => {
-                const btn = document.getElementById(`btnStatus${s.charAt(0).toUpperCase() + s.slice(1)}`);
-                if (!btn) return;
-                const isActive = s === status;
-                btn.className = isActive
-                    ? "px-3.5 py-1.5 rounded-full text-xs font-bold bg-slate-900 text-white shadow-sm shrink-0 transition"
-                    : "px-3.5 py-1.5 rounded-full text-xs font-bold bg-white text-slate-600 border border-slate-200/80 hover:bg-slate-50 shrink-0 transition";
+            ['btnStatusAll', 'btnStatusUpcoming', 'btnStatusDone'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.className = "px-3.5 py-1.5 rounded-full text-xs font-bold bg-white text-slate-600 border border-slate-200/80 hover:bg-slate-50 shrink-0 transition";
+                }
             });
+
+            const activeMap = {
+                'all': 'btnStatusAll',
+                'upcoming': 'btnStatusUpcoming',
+                'done': 'btnStatusDone'
+            };
+            const activeBtn = document.getElementById(activeMap[status]);
+            if (activeBtn) {
+                activeBtn.className = "px-3.5 py-1.5 rounded-full text-xs font-bold bg-slate-900 text-white shadow-sm shrink-0 transition";
+            }
             renderFilteredJobs();
         }
 
         function onSearchFilterInput(val) {
-            currentSearchQuery = (val || '').trim().toLowerCase();
-            document.getElementById('clearSearchBtn').classList.toggle('hidden', !currentSearchQuery);
+            currentSearchQuery = val.trim().toLowerCase();
+            const clearBtn = document.getElementById('clearSearchBtn');
+            if (clearBtn) clearBtn.classList.toggle('hidden', !currentSearchQuery);
             renderFilteredJobs();
         }
 
@@ -873,132 +844,201 @@
 
         function renderFilteredJobs() {
             const container = document.getElementById('jobCardListContainer');
+            const resultCountEl = document.getElementById('filterResultCount');
+            const showMoreContainer = document.getElementById('showMoreContainer');
+            const showMoreText = document.getElementById('toggleShowMoreText');
+            if (!container) return;
+
             const todayStr = getTodayISOString();
 
+            // 1. Filter Status & Search & Rentang Waktu
             let filtered = cachedJobs.filter(job => {
                 const iso = getJobISODate(job);
 
-                // Filter Rentang Periode Waktu
-                if (selectedPeriodYear !== 'all') {
-                    if (!iso || !iso.startsWith(selectedPeriodYear)) return false;
+                // Filter Rentang Tahun & Bulan
+                if (selectedPeriodYear !== 'all' && iso) {
+                    if (!iso.startsWith(selectedPeriodYear)) return false;
                 }
-                if (selectedPeriodMonth !== 'all') {
-                    if (!iso) return false;
-                    const m = parseInt(iso.split('-')[1], 10) - 1;
-                    if (m !== parseInt(selectedPeriodMonth, 10)) return false;
+                if (selectedPeriodMonth !== 'all' && iso) {
+                    const jobMonth = String(parseInt(iso.split('-')[1], 10) - 1);
+                    if (jobMonth !== selectedPeriodMonth) return false;
                 }
 
-                // Filter Status: upcoming / done
+                // Filter Status
                 if (currentStatusFilter === 'upcoming') {
                     if (iso && iso < todayStr) return false;
                 } else if (currentStatusFilter === 'done') {
                     if (!iso || iso >= todayStr) return false;
                 }
 
-                // Filter Search Text
+                // Filter Pencarian
                 if (currentSearchQuery) {
-                    const matchText = `${job.vendor || ''} ${job.job || ''} ${job.lokasi || ''} ${job.tanggal || ''}`.toLowerCase();
-                    if (!matchText.includes(currentSearchQuery)) return false;
+                    const searchPool = `${job.vendor} ${job.job} ${job.lokasi} ${job.tanggal}`.toLowerCase();
+                    if (!searchPool.includes(currentSearchQuery)) return false;
                 }
 
                 return true;
             });
 
-            // Update Label & Count
-            document.getElementById('filterResultCount').textContent = `${filtered.length} sesi`;
-            let periodText = "SEMUA JADWAL";
-            if (selectedPeriodMonth !== 'all' || selectedPeriodYear !== 'all') {
-                const bTxt = selectedPeriodMonth !== 'all' ? NAMA_BULAN_ID[parseInt(selectedPeriodMonth, 10)] : 'SEMUA BULAN';
-                const yTxt = selectedPeriodYear !== 'all' ? selectedPeriodYear : '';
-                periodText = `HASIL (${bTxt} ${yTxt})`.trim();
-            }
-            document.getElementById('filterResultLabel').textContent = periodText;
+            if (resultCountEl) resultCountEl.textContent = `${filtered.length} transaksi`;
 
             if (filtered.length === 0) {
                 container.innerHTML = `
-                    <div class="bg-white rounded-2xl p-8 border border-slate-200/90 text-center space-y-2">
-                        <div class="w-10 h-10 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto text-base">
-                            <i class="fa-regular fa-folder-open"></i>
-                        </div>
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200/90 text-center space-y-1">
                         <p class="text-xs font-bold text-slate-700">Tidak ada jadwal ditemukan</p>
-                        <p class="text-[10px] text-slate-400">Coba ubah filter periode atau kata kunci pencarian.</p>
+                        <p class="text-[11px] text-slate-400">Coba ubah kata kunci atau ganti filter status.</p>
                     </div>
                 `;
-                document.getElementById('showMoreContainer').classList.add('hidden');
+                if (showMoreContainer) showMoreContainer.classList.add('hidden');
                 return;
             }
 
-            // Batasi 10 item jika isShowAllJobs = false
-            const shouldLimit = filtered.length > 10 && !isShowAllJobs;
-            const displayedJobs = shouldLimit ? filtered.slice(0, 10) : filtered;
+            // Batasi tampilan jika lebih dari 10
+            const displayLimit = isShowAllJobs ? filtered.length : 10;
+            const displayJobs = filtered.slice(0, displayLimit);
 
-            container.innerHTML = displayedJobs.map(job => {
-                const iso = getJobISODate(job);
-                const isToday = iso === todayStr;
-                const isUpcoming = iso && iso > todayStr;
-                
-                let badgeStatus = `<span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">Selesai</span>`;
-                let iconColor = "bg-slate-100 text-slate-600";
-
-                if (isToday) {
-                    badgeStatus = `<span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 animate-pulse">HARI INI</span>`;
-                    iconColor = "bg-emerald-500 text-white shadow-md shadow-emerald-500/20";
-                } else if (isUpcoming) {
-                    badgeStatus = `<span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">Mendatang</span>`;
-                    iconColor = "bg-slate-900 text-emerald-400";
-                }
-
-                // Cari index asli di cachedJobs agar tidak salah sasaran saat edit
+            container.innerHTML = displayJobs.map(job => {
                 const cachedIndex = cachedJobs.indexOf(job);
+                const iso = getJobISODate(job);
+                const isPassed = iso && iso < todayStr;
 
                 return `
                     <div class="bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-sm flex items-center justify-between gap-3 hover:border-slate-300 transition">
-                        <div class="flex items-center gap-3 overflow-hidden">
-                            <div class="w-10 h-10 rounded-xl ${iconColor} flex items-center justify-center text-sm shrink-0 font-bold">
-                                <i class="fa-solid fa-briefcase"></i>
+                        <div class="overflow-hidden">
+                            <div class="flex items-center gap-2">
+                                <h4 class="text-xs font-extrabold text-slate-900 truncate">${job.vendor || '-'}</h4>
+                                <span class="text-[9px] font-bold px-2 py-0.5 rounded-full ${isPassed ? 'bg-slate-100 text-slate-500' : 'bg-emerald-50 text-emerald-700'} shrink-0">${job.job || 'Job'}</span>
                             </div>
-                            <div class="overflow-hidden">
-                                <div class="flex items-center gap-2">
-                                    <h4 class="text-xs font-extrabold text-slate-900 truncate leading-snug">${job.vendor || '-'}</h4>
-                                    ${badgeStatus}
-                                </div>
-                                <p class="text-[11px] font-bold text-slate-700 truncate mt-0.5">${job.job || '-'}</p>
-                                <div class="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1.5 truncate">
-                                    <span class="font-semibold text-emerald-700">${job.tanggal || '-'}</span>
-                                    <span>•</span>
-                                    <span>${job.waktu || '-'}</span>
-                                    ${job.lokasi ? `<span>• ${job.lokasi}</span>` : ''}
-                                </div>
+                            <div class="text-[10px] text-slate-500 mt-1 flex items-center gap-1.5 truncate">
+                                <span class="font-bold text-slate-700">${job.tanggal || '-'}</span>
+                                <span>• ${job.waktu || 'Waktu Fleksibel'}</span>
+                                ${job.lokasi ? `<span>• ${job.lokasi}</span>` : ''}
                             </div>
                         </div>
-
-                        <!-- Tombol Aksi Edit Shortcut Berdasarkan Index Spesifik -->
-                        <div class="flex items-center gap-1 shrink-0">
-                            <button onclick="shortcutEditJobByIndex(${cachedIndex})" class="w-8 h-8 rounded-lg bg-slate-50 hover:bg-slate-100 active:scale-90 text-slate-600 flex items-center justify-center transition" title="Edit / Reschedule">
-                                <i class="fa-solid fa-pen-to-square text-xs"></i>
-                            </button>
-                        </div>
+                        <button onclick="shortcutEditJobByIndex(${cachedIndex})" class="w-8 h-8 rounded-xl bg-slate-50 hover:bg-slate-100 active:scale-90 text-slate-600 flex items-center justify-center transition shrink-0" title="Edit / Reschedule">
+                            <i class="fa-solid fa-pen-to-square text-xs"></i>
+                        </button>
                     </div>
                 `;
             }).join('');
 
-            // Tampilkan / sembunyikan tombol "Tampilkan Semua"
-            const showMoreContainer = document.getElementById('showMoreContainer');
-            const toggleShowMoreText = document.getElementById('toggleShowMoreText');
+            // Tampilkan tombol paginasi jika item > 10
             if (filtered.length > 10) {
                 showMoreContainer.classList.remove('hidden');
-                if (isShowAllJobs) {
-                    toggleShowMoreText.textContent = "Tampilkan Lebih Sedikit (10 Saja)";
-                } else {
-                    toggleShowMoreText.textContent = `Tampilkan Semua (${filtered.length - 10} Sesi Lagi)`;
-                }
+                showMoreText.textContent = isShowAllJobs ? `Ciutkan (Tampilkan 10 Saja)` : `Tampilkan Semua (${filtered.length} Sesi)`;
             } else {
                 showMoreContainer.classList.add('hidden');
             }
         }
 
+        function getTodayISOString() {
+            const d = new Date();
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        }
+
+        function getActiveScriptUrl() {
+            return localStorage.getItem('freelance_script_url') || DEFAULT_SCRIPT_URL;
+        }
+
+        function formatPickerToIndonesianDate(isoStr) {
+            if (!isoStr) return "";
+            const parts = isoStr.split('-');
+            if (parts.length < 3) return isoStr;
+            const y = parts[0];
+            const m = parseInt(parts[1], 10) - 1;
+            const d = parseInt(parts[2], 10);
+            const monthName = NAMA_BULAN_ID[m] || "";
+            return `${d} ${monthName} ${y}`.trim();
+        }
+
+        function parseFreeTextToISODate(str) {
+            if (!str) return "";
+            
+            // Jika objek Date
+            if (str instanceof Date || (typeof str === 'object' && str !== null && typeof str.toISOString === 'function')) {
+                try {
+                    const d = new Date(str);
+                    if (!isNaN(d.getTime())) {
+                        const y = d.getFullYear();
+                        const m = String(d.getMonth() + 1).padStart(2, '0');
+                        const day = String(d.getDate()).padStart(2, '0');
+                        return `${y}-${m}-${day}`;
+                    }
+                } catch(e) {}
+            }
+
+            let raw = String(str).toLowerCase().replace(/[\u00A0\u1680\u180e\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]/g, ' ').trim();
+
+            // Format ISO YYYY-MM-DD
+            const isoMatch = raw.match(/\b(20\d\d)[-\/\.](\d{1,2})[-\/\.](\d{1,2})\b/);
+            if (isoMatch) {
+                const y = isoMatch[1];
+                const m = String(parseInt(isoMatch[2], 10)).padStart(2, '0');
+                const d = String(parseInt(isoMatch[3], 10)).padStart(2, '0');
+                return `${y}-${m}-${d}`;
+            }
+
+            // Format Teks Indonesia/Inggris (Toleran terhadap underscore & prefix checklist)
+            const textMatch = raw.match(/(\d{1,2})\s+([a-z]+)\s*(?:[_\s\-]+)?(20\d\d|\d{2})/i);
+            if (textMatch) {
+                const day = String(parseInt(textMatch[1], 10)).padStart(2, '0');
+                const monthKey = textMatch[2].toLowerCase().trim();
+                let mIndex = -1;
+
+                if (MONTH_MAP[monthKey] !== undefined) {
+                    mIndex = MONTH_MAP[monthKey];
+                } else {
+                    for (const k in MONTH_MAP) {
+                        if (monthKey.startsWith(k) || k.startsWith(monthKey)) {
+                            mIndex = MONTH_MAP[k];
+                            break;
+                        }
+                    }
+                }
+
+                if (mIndex !== -1) {
+                    const month = String(mIndex + 1).padStart(2, '0');
+                    let year = textMatch[3];
+                    if (year.length === 2) year = '20' + year;
+                    return `${year}-${month}-${day}`;
+                }
+            }
+
+            // Format DD/MM/YYYY
+            const numMatch = raw.match(/(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](20\d\d|\d{2})/);
+            if (numMatch) {
+                const day = String(parseInt(numMatch[1], 10)).padStart(2, '0');
+                const month = String(parseInt(numMatch[2], 10)).padStart(2, '0');
+                let year = numMatch[3];
+                if (year.length === 2) year = '20' + year;
+                return `${year}-${month}-${day}`;
+            }
+
+            return "";
+        }
+
+        function getJobISODate(job) {
+            if (!job) return "";
+            if (job.isoDate && /^\d{4}-\d{2}-\d{2}$/.test(job.isoDate)) return job.isoDate;
+            
+            const fields = [job.tanggal, job.Tanggal, job.date, job.Date, job.waktu, job.Waktu, job.lokasi];
+            for (const val of fields) {
+                if (val) {
+                    const res = parseFreeTextToISODate(val);
+                    if (res) {
+                        job.isoDate = res;
+                        return res;
+                    }
+                }
+            }
+            return "";
+        }
+
         // ==============================================================
-        // GOOGLE CALENDAR GRID ENGINE
+        // GOOGLE CALENDAR GRID ENGINE DENGAN HIGHLIGHT PRESISI
         // ==============================================================
         function changeCalMonth(delta) {
             currentCalMonth += delta;
@@ -1009,6 +1049,8 @@
                 currentCalMonth = 11;
                 currentCalYear--;
             }
+            const curMonthStr = String(currentCalMonth + 1).padStart(2, '0');
+            selectedCalDateISO = `${currentCalYear}-${curMonthStr}-01`;
             renderGCalendar();
         }
 
@@ -1021,54 +1063,80 @@
         }
 
         function renderGCalendar() {
-            document.getElementById('calMonthYearLabel').textContent = `${NAMA_BULAN_ID[currentCalMonth]} ${currentCalYear}`;
+            const labelEl = document.getElementById('calMonthYearLabel');
+            if (labelEl) {
+                labelEl.textContent = `${NAMA_BULAN_ID[currentCalMonth]} ${currentCalYear}`;
+            }
             const grid = document.getElementById('calDaysGrid');
+            if (!grid) return;
             grid.innerHTML = '';
 
             const firstDay = new Date(currentCalYear, currentCalMonth, 1).getDay();
             const daysInMonth = new Date(currentCalYear, currentCalMonth + 1, 0).getDate();
             const todayStr = getTodayISOString();
 
-            // Petakan job ke tanggal
+            // Peta tanggal ISO (YYYY-MM-DD) ke array job
             const jobsByDate = {};
             cachedJobs.forEach(job => {
                 const iso = getJobISODate(job);
-                if (iso) {
+                if (iso && iso.length === 10) {
                     if (!jobsByDate[iso]) jobsByDate[iso] = [];
                     jobsByDate[iso].push(job);
                 }
             });
 
-            // Kotak kosong awal bulan
+            const currentMonthStr = String(currentCalMonth + 1).padStart(2, '0');
+            const prefixMonth = `${currentCalYear}-${currentMonthStr}`;
+
+            // Jika tanggal terpilih bukan di bulan ini atau tidak punya sesi, pilih tanggal terdekat yang memiliki job
+            const activeDatesInThisMonth = Object.keys(jobsByDate)
+                .filter(k => k.startsWith(prefixMonth))
+                .sort();
+
+            const isSelectedInMonth = selectedCalDateISO && selectedCalDateISO.startsWith(prefixMonth);
+            if ((!isSelectedInMonth || !jobsByDate[selectedCalDateISO]) && activeDatesInThisMonth.length > 0) {
+                const upcomingOrFirst = activeDatesInThisMonth.find(d => d >= todayStr) || activeDatesInThisMonth[0];
+                selectedCalDateISO = upcomingOrFirst;
+            }
+
+            // Cell kosong sebelum tanggal 1
             for (let i = 0; i < firstDay; i++) {
                 const emptyCell = document.createElement('div');
-                emptyCell.className = "h-11 rounded-xl";
+                emptyCell.className = "h-11 rounded-xl pointer-events-none";
                 grid.appendChild(emptyCell);
             }
 
-            // Render tanggal
+            // Render tanggal 1 sampai akhir bulan
             for (let d = 1; d <= daysInMonth; d++) {
-                const currentMonthStr = String(currentCalMonth + 1).padStart(2, '0');
                 const dayStr = String(d).padStart(2, '0');
                 const isoDate = `${currentCalYear}-${currentMonthStr}-${dayStr}`;
 
-                const hasJobs = jobsByDate[isoDate] && jobsByDate[isoDate].length > 0;
-                const isSelected = isoDate === selectedCalDateISO;
-                const isToday = isoDate === todayStr;
+                const dayJobs = jobsByDate[isoDate] || [];
+                const hasJobs = dayJobs.length > 0;
+                const isSelected = (isoDate === selectedCalDateISO);
+                const isToday = (isoDate === todayStr);
 
-                let cellBg = "bg-slate-50 text-slate-800 hover:bg-slate-100";
+                let cellBg = "bg-slate-50/80 text-slate-800 hover:bg-slate-100";
                 if (isSelected) {
-                    cellBg = "bg-slate-900 text-white shadow-md";
+                    cellBg = "bg-slate-900 text-white shadow-md shadow-slate-900/25";
                 } else if (isToday) {
-                    cellBg = "bg-emerald-50 text-emerald-800 border border-emerald-300 font-extrabold";
+                    cellBg = "bg-emerald-50 text-emerald-800 ring-2 ring-emerald-400 font-extrabold";
                 }
 
                 const dayCell = document.createElement('button');
+                dayCell.type = "button";
                 dayCell.className = `h-11 rounded-xl flex flex-col items-center justify-center relative text-xs font-bold transition active:scale-95 ${cellBg}`;
                 
                 dayCell.innerHTML = `
-                    <span>${d}</span>
-                    ${hasJobs ? `<span class="w-1.5 h-1.5 rounded-full mt-0.5 ${isSelected ? 'bg-emerald-400' : 'bg-emerald-600'}"></span>` : ''}
+                    <span class="leading-none">${d}</span>
+                    <div class="h-2 flex items-center justify-center mt-1">
+                        ${hasJobs ? `
+                            <span class="flex items-center gap-0.5">
+                                <span class="w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-emerald-400 ring-1 ring-white/50' : 'bg-emerald-600 shadow-sm'}"></span>
+                                ${dayJobs.length > 1 ? `<span class="text-[8px] font-extrabold leading-none ${isSelected ? 'text-emerald-300' : 'text-emerald-700'}">${dayJobs.length}</span>` : ''}
+                            </span>
+                        ` : ''}
+                    </div>
                 `;
 
                 dayCell.onclick = () => {
@@ -1086,19 +1154,32 @@
             const container = document.getElementById('selectedDateAgendaList');
             const titleEl = document.getElementById('selectedDateAgendaTitle');
             const badgeEl = document.getElementById('selectedDateCountBadge');
+            if (!container || !titleEl || !badgeEl) return;
 
-            const [y, m, d] = selectedCalDateISO.split('-');
-            titleEl.textContent = `Agenda: ${parseInt(d, 10)} ${NAMA_BULAN_ID[parseInt(m, 10) - 1]} ${y}`;
+            if (!selectedCalDateISO) {
+                selectedCalDateISO = getTodayISOString();
+            }
+
+            const parts = selectedCalDateISO.split('-');
+            if (parts.length === 3) {
+                const y = parts[0];
+                const m = parseInt(parts[1], 10) - 1;
+                const d = parseInt(parts[2], 10);
+                titleEl.textContent = `Agenda: ${d} ${NAMA_BULAN_ID[m] || ''} ${y}`;
+            }
 
             const jobsToday = cachedJobs.filter(j => getJobISODate(j) === selectedCalDateISO);
             badgeEl.textContent = `${jobsToday.length} Sesi`;
 
             if (jobsToday.length === 0) {
                 container.innerHTML = `
-                    <div class="bg-white p-4 rounded-2xl border border-slate-200 text-center space-y-1.5">
-                        <p class="text-xs font-semibold text-slate-500">Tidak ada jadwal sesi pada tanggal ini</p>
-                        <button onclick="quickAddDate('${selectedCalDateISO}')" class="text-[11px] font-bold text-emerald-700 hover:underline">
-                            + Tambah job untuk tanggal ini
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200/90 text-center space-y-2">
+                        <div class="w-8 h-8 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto text-xs">
+                            <i class="fa-regular fa-calendar-xmark"></i>
+                        </div>
+                        <p class="text-xs font-semibold text-slate-600">Tidak ada jadwal sesi pada tanggal ini</p>
+                        <button onclick="quickAddDate('${selectedCalDateISO}')" class="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-xl hover:bg-emerald-100 transition">
+                            <i class="fa-solid fa-plus text-[10px]"></i> Tambah job untuk tanggal ini
                         </button>
                     </div>
                 `;
@@ -1108,16 +1189,19 @@
             container.innerHTML = jobsToday.map(job => {
                 const cachedIndex = cachedJobs.indexOf(job);
                 return `
-                    <div class="bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-sm flex items-center justify-between gap-3">
+                    <div class="bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-sm flex items-center justify-between gap-3 hover:border-slate-300 transition">
                         <div class="overflow-hidden">
-                            <h4 class="text-xs font-extrabold text-slate-900 truncate">${job.vendor}</h4>
-                            <p class="text-[11px] font-bold text-emerald-800 mt-0.5 truncate">${job.job}</p>
-                            <div class="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1.5 truncate">
+                            <div class="flex items-center gap-2">
+                                <h4 class="text-xs font-extrabold text-slate-900 truncate">${job.vendor || '-'}</h4>
+                                <span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 shrink-0">${job.job || 'Job'}</span>
+                            </div>
+                            <div class="text-[10px] text-slate-500 mt-1 flex items-center gap-1.5 truncate">
+                                <i class="fa-regular fa-clock text-emerald-700 text-[10px]"></i>
                                 <span class="font-semibold text-slate-700">${job.waktu || 'Waktu Fleksibel'}</span>
                                 ${job.lokasi ? `<span>• ${job.lokasi}</span>` : ''}
                             </div>
                         </div>
-                        <button onclick="shortcutEditJobByIndex(${cachedIndex})" class="w-8 h-8 rounded-lg bg-slate-50 hover:bg-slate-100 active:scale-90 text-slate-600 flex items-center justify-center transition">
+                        <button onclick="shortcutEditJobByIndex(${cachedIndex})" class="w-8 h-8 rounded-xl bg-slate-50 hover:bg-slate-100 active:scale-90 text-slate-600 flex items-center justify-center transition shrink-0" title="Edit / Reschedule">
                             <i class="fa-solid fa-pen-to-square text-xs"></i>
                         </button>
                     </div>
@@ -1537,15 +1621,15 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         action: "reschedule",
-                        // Parameter spesifik jadwal asli agar tidak salah sasaran ke tanggal lain
+                        // Parameter spesifik jadwal asli agar 100% tepat sasaran
+                        rowIndex: selectedJob.rowIndex !== undefined ? selectedJob.rowIndex : '',
                         originalVendor: selectedJob.vendor,
                         originalJob: selectedJob.job,
                         originalTanggal: selectedJob.tanggal || '',
                         originalIsoDate: getJobISODate(selectedJob),
                         originalWaktu: selectedJob.waktu || '',
                         originalLokasi: selectedJob.lokasi || '',
-                        rowIndex: selectedJob.rowIndex !== undefined ? selectedJob.rowIndex : '',
-                        // Data baru
+                        // Data pembaruan
                         vendorBaru: vendorBaru,
                         tanggalBaru: tanggalBaruFormatted,
                         isoDateBaru: isoDateBaru,
@@ -1586,9 +1670,11 @@
             const scriptUrl = getActiveScriptUrl();
             if (!scriptUrl || !selectedJob) return;
 
-            const btn = document.getElementById('btnDeleteJob');
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Hapus...';
+            const btn = document.getElementById('btnConfirmDeleteAction');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Hapus...';
+            }
 
             try {
                 await fetch(scriptUrl, {
@@ -1597,13 +1683,12 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         action: "delete_job",
-                        // Parameter spesifik agar hanya baris ini yang dihapus
+                        rowIndex: selectedJob.rowIndex !== undefined ? selectedJob.rowIndex : '',
                         vendor: selectedJob.vendor,
                         job: selectedJob.job,
                         tanggal: selectedJob.tanggal || '',
                         isoDate: getJobISODate(selectedJob),
-                        waktu: selectedJob.waktu || '',
-                        rowIndex: selectedJob.rowIndex !== undefined ? selectedJob.rowIndex : ''
+                        waktu: selectedJob.waktu || ''
                     })
                 });
 
@@ -1618,8 +1703,10 @@
             } catch (err) {
                 showToast('Gagal menghapus job');
             } finally {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fa-solid fa-trash-can"></i> Hapus';
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = 'Hapus';
+                }
             }
         }
 
@@ -1750,6 +1837,7 @@
         window.onload = function() {
             loadProfileData();
             updatePeriodSelectorUI();
+            renderGCalendar(); // Inisialisasi awal struktur kalender
             const activeUrl = getActiveScriptUrl();
             if (activeUrl && !activeUrl.includes('CONTOH_GANTI')) {
                 loadJobs(false);
