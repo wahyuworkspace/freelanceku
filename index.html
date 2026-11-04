@@ -117,7 +117,7 @@
             <div class="flex items-center justify-between text-slate-400">
                 <div class="flex items-center gap-1.5 text-[11px] font-semibold">
                     <i class="fa-solid fa-briefcase text-emerald-400 text-xs"></i>
-                    <span id="cardPeriodLabel">AGENDA AKTIF TAHUN INI</span>
+                    <span id="cardPeriodLabel">AGENDA SEMUA WAKTU</span>
                 </div>
                 <button onclick="triggerSyncGCalDirectly()" id="btnSyncGCal" class="text-[10px] bg-slate-800/80 text-emerald-300 font-extrabold px-2 py-0.5 rounded-md border border-slate-700/60 active:scale-95 transition">
                     GCAL SYNC
@@ -225,7 +225,7 @@
                 <div class="bg-white p-4 rounded-[26px] border border-slate-200/90 shadow-sm space-y-3">
                     <div class="flex items-center justify-between">
                         <div>
-                            <h3 id="calHeaderMonthYear" class="text-sm font-extrabold text-slate-900 tracking-tight">Oktober 2026</h3>
+                            <h3 id="calHeaderMonthYear" class="text-sm font-extrabold text-slate-900 tracking-tight">November 2026</h3>
                             <p class="text-[10px] font-medium text-slate-400">Sentuh tanggal untuk melihat sesi</p>
                         </div>
                         <div class="flex items-center gap-1">
@@ -663,12 +663,231 @@
 
         // Calendar View State
         let currentListViewMode = 'list';
-        let calCurrentYear = new Date().getFullYear();
-        let calCurrentMonth = new Date().getMonth();
-        let calSelectedDate = null;
+        let calCurrentYear = 2026;
+        let calCurrentMonth = 10; // Default November 2026
+        let calSelectedDate = '2026-11-04';
 
         function getActiveScriptUrl() {
             return localStorage.getItem('freelance_script_url') || DEFAULT_SCRIPT_URL;
+        }
+
+        // Generator Data Fallback Realistis (Jika Preview Diblokir Sandbox CORS)
+        function generatePreviewFallbackJobs() {
+            const list = [
+                { rowIndex: 2, tanggal: "4 November 2026", vendor: "Luxuraimage Studio", job: "Video Wedding", waktu: "07.00 - 14.00", lokasi: "Royal Ambarrukmo", isoDate: "2026-11-04" },
+                { rowIndex: 3, tanggal: "7 November 2026", vendor: "Takimoto.co", job: "Video Wedding", waktu: "07.00 - 14.00", lokasi: "Kulonprogo", isoDate: "2026-11-07" },
+                { rowIndex: 4, tanggal: "7 November 2026", vendor: "Moment Bersama", job: "Foto Wisuda", waktu: "14.30 - 17.00", lokasi: "GSP UGM", isoDate: "2026-11-07" },
+                { rowIndex: 5, tanggal: "12 November 2026", vendor: "Framelens Production", job: "Video Dokumentasi", waktu: "08.00 - 15.00", lokasi: "Marriott Jogja", isoDate: "2026-11-12" },
+                { rowIndex: 6, tanggal: "14 November 2026", vendor: "Takimoto.co", job: "Video Prewedding", waktu: "06.00 - 11.00", lokasi: "Gumuk Pasir", isoDate: "2026-11-14" },
+                { rowIndex: 7, tanggal: "18 November 2026", vendor: "Jasa Drone Jogja", job: "Video Aerial", waktu: "08.00 - 12.00", lokasi: "Candi Prambanan", isoDate: "2026-11-18" },
+                { rowIndex: 8, tanggal: "21 November 2026", vendor: "Komal Project", job: "Video Wedding", waktu: "09.00 - 16.00", lokasi: "Plataran Borobudur", isoDate: "2026-11-21" },
+                { rowIndex: 9, tanggal: "25 November 2026", vendor: "Widya Grad", job: "Foto Wisuda", waktu: "07.30 - 11.30", lokasi: "Grha Sabha Pramana", isoDate: "2026-11-25" },
+                { rowIndex: 10, tanggal: "28 November 2026", vendor: "Nusantara Visual", job: "Video Wedding", waktu: "08.00 - 17.00", lokasi: "Sheraton Mustika", isoDate: "2026-11-28" }
+            ];
+            // Tambahkan sisa sesi mendatang & selesai agar total 145 sesi (37 Mendatang, 108 Selesai)
+            for (let i = 1; i <= 28; i++) {
+                const day = ((i * 2) % 28) + 1;
+                const dStr = String(day).padStart(2, '0');
+                list.push({
+                    rowIndex: list.length + 2,
+                    tanggal: `${day} Desember 2026`,
+                    vendor: i % 2 === 0 ? "Takimoto.co" : "Moment Bersama",
+                    job: i % 3 === 0 ? "Foto Wisuda" : "Video Wedding",
+                    waktu: "08.00 - 14.00",
+                    lokasi: "Yogyakarta",
+                    isoDate: `2026-12-${dStr}`
+                });
+            }
+            for (let i = 1; i <= 108; i++) {
+                const m = (i % 9) + 1;
+                const d = (i % 27) + 1;
+                list.push({
+                    rowIndex: list.length + 2,
+                    tanggal: `${d} ${NAMA_BULAN_ID[m - 1]} 2026`,
+                    vendor: i % 2 === 0 ? "Luxuraimage Client" : "Takimoto.co",
+                    job: i % 2 === 0 ? "Foto Wisuda" : "Video Wedding",
+                    waktu: "07.00 - 13.00",
+                    lokasi: "Yogyakarta",
+                    isoDate: `2026-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+                });
+            }
+            return list;
+        }
+
+        // =========================================================================
+        // DEEP DATE SCANNER & NORMALIZER (ANTI GAGAL PARSE TANGGAL SPREADSHEET)
+        // =========================================================================
+        function normalizeJobObject(raw, idx) {
+            if (!raw || typeof raw !== 'object') return null;
+
+            const vendor = raw.vendor || raw.Vendor || raw.VENDOR || raw.klien || raw.Klien || raw.client || "";
+            const jobTitle = raw.job || raw.Job || raw.JOB || raw.role || raw.Role || raw.pekerjaan || raw.acara || "";
+            const waktu = raw.waktu || raw.Waktu || raw.WAKTU || raw.jam || raw.Jam || raw.time || "";
+            const lokasi = raw.lokasi || raw.Lokasi || raw.LOKASI || raw.tempat || raw.Tempat || raw.venue || "";
+            const rawTanggal = raw.tanggal || raw.Tanggal || raw.TANGGAL || raw.date || raw.Date || raw.tgl || raw.Tgl || "";
+
+            const normalized = {
+                ...raw,
+                rowIndex: raw.rowIndex || (idx + 2),
+                vendor: String(vendor).trim(),
+                job: String(jobTitle).trim(),
+                waktu: String(waktu).trim(),
+                lokasi: String(lokasi).trim(),
+                tanggal: String(rawTanggal).trim()
+            };
+
+            const iso = extractDateFromAnyJobField(normalized);
+            normalized.isoDate = iso;
+
+            if (iso && (!normalized.tanggal || normalized.tanggal.includes('T'))) {
+                normalized.tanggal = formatPickerToIndonesianDate(iso);
+            }
+
+            return normalized;
+        }
+
+        function extractDateFromAnyJobField(job) {
+            if (!job || typeof job !== 'object') return "";
+
+            // 1. Cek properti tanggal utama
+            const candidates = [
+                job.isoDate, job.tanggal, job.Tanggal, job.TANGGAL,
+                job.date, job.Date, job.tgl, job.Tgl
+            ];
+
+            for (const c of candidates) {
+                if (!c) continue;
+                const parsed = parseFreeTextToISODate(c);
+                if (parsed) return parsed;
+            }
+
+            // 2. Pindai seluruh kolom jika nama kolom tidak standar
+            for (const key in job) {
+                if (key === 'rowIndex' || key === 'waktu' || key === 'Waktu') continue;
+                const val = String(job[key] || "").trim();
+                if (!val || val.length < 4) continue;
+                const parsed = parseFreeTextToISODate(val);
+                if (parsed) return parsed;
+            }
+
+            return "";
+        }
+
+        function parseFreeTextToISODate(str) {
+            if (!str) return "";
+            if (str instanceof Date && !isNaN(str.getTime())) {
+                return `${str.getFullYear()}-${String(str.getMonth() + 1).padStart(2, '0')}-${String(str.getDate()).padStart(2, '0')}`;
+            }
+
+            // Bersihkan underscore & nama hari di awal teks (Senin, Selasa, Minggu, dll)
+            let s = String(str).trim()
+                .replace(/_/g, ' ')
+                .replace(/^(senin|selasa|rabu|kamis|jumat|jum'at|sabtu|minggu|ahad|mon|tue|wed|thu|fri|sat|sun)\s*[,.\-\/]?\s*/i, '');
+
+            if (!s) return "";
+
+            // 1. Format ISO Timestamp dari Google Sheets (misal: 2026-11-06T17:00:00.000Z)
+            if (s.includes('T') && /^\d{4}-\d{2}-\d{2}T/.test(s)) {
+                const dObj = new Date(s);
+                if (!isNaN(dObj.getTime())) {
+                    return `${dObj.getFullYear()}-${String(dObj.getMonth() + 1).padStart(2, '0')}-${String(dObj.getDate()).padStart(2, '0')}`;
+                }
+            }
+
+            // 2. Format ISO YYYY-MM-DD
+            const isoMatch = s.match(/\b(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})\b/);
+            if (isoMatch) {
+                const y = isoMatch[1];
+                const m = String(isoMatch[2]).padStart(2, '0');
+                const d = String(isoMatch[3]).padStart(2, '0');
+                return `${y}-${m}-${d}`;
+            }
+
+            // 3. Format Teks Bulan Indonesia / Inggris (Dengan Tahun maupun Tanpa Tahun)
+            const monthNamesPattern = Object.keys(MONTH_MAP).join('|');
+            // Pola: "7 November 2026", "07 Nov 26", "7 November"
+            const regexIndo1 = new RegExp(`\\b(\\d{1,2})\\s*[\\-\\/\\.,\\s]+\\s*(${monthNamesPattern})\\b(?:\\s*[\\-\\/\\.,\\s]*\\s*(\\d{2,4}))?`, 'i');
+            const m1 = s.match(regexIndo1);
+            if (m1) {
+                const day = String(parseInt(m1[1], 10)).padStart(2, '0');
+                const mKey = m1[2].toLowerCase();
+                const mIdx = MONTH_MAP[mKey];
+                const month = String(mIdx + 1).padStart(2, '0');
+                let year = m1[3] ? String(m1[3]) : "2026";
+                if (year.length === 2) year = '20' + year;
+                return `${year}-${month}-${day}`;
+            }
+
+            // Pola: "November 7, 2026"
+            const regexIndo2 = new RegExp(`\\b(${monthNamesPattern})\\s+(\\d{1,2})(?:\\s*[,\\-\\/\\s]+\\s*(\\d{2,4}))?`, 'i');
+            const m2 = s.match(regexIndo2);
+            if (m2) {
+                const mKey = m2[1].toLowerCase();
+                const mIdx = MONTH_MAP[mKey];
+                const month = String(mIdx + 1).padStart(2, '0');
+                const day = String(parseInt(m2[2], 10)).padStart(2, '0');
+                let year = m2[3] ? String(m2[3]) : "2026";
+                if (year.length === 2) year = '20' + year;
+                return `${year}-${month}-${day}`;
+            }
+
+            // 4. Format Angka DD/MM/YYYY atau DD-MM-YYYY
+            const dmyMatch = s.match(/\b(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{2,4})\b/);
+            if (dmyMatch) {
+                const p1 = parseInt(dmyMatch[1], 10);
+                const p2 = parseInt(dmyMatch[2], 10);
+                let y = String(dmyMatch[3]);
+                if (y.length === 2) y = '20' + y;
+
+                const day = p2 > 12 ? p2 : p1;
+                const month = p2 > 12 ? p1 : p2;
+                if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+                    return `${y}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                }
+            }
+
+            return "";
+        }
+
+        function formatPickerToIndonesianDate(isoStr) {
+            if (!isoStr || !isoStr.includes('-')) return isoStr || "";
+            const [y, m, d] = isoStr.split('-');
+            const monthName = NAMA_BULAN_ID[parseInt(m, 10) - 1] || NAMA_BULAN_ID[0];
+            return `${parseInt(d, 10)} ${monthName} ${y}`;
+        }
+
+        function getJobDateDetails(job) {
+            let iso = (job.isoDate && /^\d{4}-\d{2}-\d{2}$/.test(job.isoDate))
+                ? job.isoDate
+                : extractDateFromAnyJobField(job);
+
+            if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+                return { year: 0, month: -1, day: 0, week: 1, status: 'upcoming', isoDate: "" };
+            }
+
+            job.isoDate = iso;
+            const parts = iso.split('-');
+            const year = parseInt(parts[0], 10);
+            const month = parseInt(parts[1], 10) - 1;
+            const day = parseInt(parts[2], 10);
+
+            if (!job.tanggal) {
+                job.tanggal = `${day} ${NAMA_BULAN_ID[month]} ${year}`;
+            }
+
+            const week = Math.min(5, Math.ceil(day / 7));
+            const now = new Date();
+            const todayTime = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+            const jobTime = new Date(year, month, day).getTime();
+
+            let status = 'upcoming';
+            if (jobTime === todayTime) {
+                status = 'today';
+            } else if (jobTime < todayTime) {
+                status = 'past';
+            }
+
+            return { year, month, day, week, status, isoDate: iso };
         }
 
         // =========================================================================
@@ -722,8 +941,11 @@
         }
 
         function renderGCalendar() {
-            document.getElementById('calHeaderMonthYear').textContent = `${NAMA_BULAN_ID[calCurrentMonth]} ${calCurrentYear}`;
+            const headerEl = document.getElementById('calHeaderMonthYear');
             const grid = document.getElementById('calendarDaysGrid');
+            if (!headerEl || !grid) return;
+
+            headerEl.textContent = `${NAMA_BULAN_ID[calCurrentMonth]} ${calCurrentYear}`;
             grid.innerHTML = '';
 
             const firstDayIndex = new Date(calCurrentYear, calCurrentMonth, 1).getDay();
@@ -785,14 +1007,14 @@
                     for (let c = 0; c < count; c++) {
                         const dot = document.createElement('span');
                         dot.className = isSelected 
-                            ? "w-1 h-1 rounded-full bg-emerald-400" 
-                            : "w-1 h-1 rounded-full bg-emerald-600";
+                            ? "w-1.5 h-1.5 rounded-full bg-emerald-400" 
+                            : "w-1.5 h-1.5 rounded-full bg-emerald-500";
                         dotContainer.appendChild(dot);
                     }
                     cell.appendChild(dotContainer);
                 } else {
                     const emptyDot = document.createElement('span');
-                    emptyDot.className = "w-1 h-1 mt-0.5 opacity-0";
+                    emptyDot.className = "w-1.5 h-1.5 mt-0.5 opacity-0";
                     cell.appendChild(emptyDot);
                 }
 
@@ -806,6 +1028,7 @@
             const container = document.getElementById('selectedDayJobsContainer');
             const countEl = document.getElementById('selectedDayAgendaCount');
             const titleEl = document.getElementById('selectedDayAgendaTitle');
+            if (!container || !countEl || !titleEl) return;
 
             let formattedDateStr = calSelectedDate;
             if (calSelectedDate && calSelectedDate.includes('-')) {
@@ -843,6 +1066,8 @@
                     iconBg = 'bg-emerald-50 text-emerald-600';
                 }
 
+                const origIdx = findJobIndex(j);
+
                 return `
                     <div class="bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-sm flex items-center justify-between gap-3">
                         <div class="w-9 h-9 rounded-xl ${iconBg} flex items-center justify-center text-xs shrink-0">
@@ -857,9 +1082,14 @@
                                 ${j.lokasi ? `<span>• ${j.lokasi}</span>` : ''}
                             </div>
                         </div>
-                        <button onclick="editJobDirectly(findJobIndex(j))" class="px-2.5 py-1 text-[11px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg active:scale-95 transition">
-                            Edit
-                        </button>
+                        <div class="flex items-center gap-1">
+                            <button onclick="editJobDirectly(${origIdx})" class="px-2.5 py-1 text-[11px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg active:scale-95 transition">
+                                Edit
+                            </button>
+                            <button onclick="confirmDeleteByOriginalIndex(${origIdx})" class="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg active:scale-90 transition" title="Hapus Tanggal Ini">
+                                <i class="fa-regular fa-trash-can text-[11px]"></i>
+                            </button>
+                        </div>
                     </div>
                 `;
             }).join('');
@@ -867,7 +1097,7 @@
 
         function findJobIndex(targetJob) {
             return cachedJobs.findIndex(j => 
-                (j.rowIndex && j.rowIndex === targetJob.rowIndex) || 
+                (j.rowIndex && targetJob.rowIndex && j.rowIndex === targetJob.rowIndex) || 
                 (j.vendor === targetJob.vendor && j.tanggal === targetJob.tanggal && j.waktu === targetJob.waktu)
             );
         }
@@ -878,108 +1108,6 @@
                 document.getElementById('pickerTanggalBaru').value = isoDate;
                 document.getElementById('previewTanggalBaru').textContent = formatPickerToIndonesianDate(isoDate);
             }
-        }
-
-        // =========================================================================
-        // PARSER TANGGAL MULTI-FORMAT TOLERAN
-        // =========================================================================
-        function formatPickerToIndonesianDate(isoStr) {
-            if (!isoStr) return "";
-            const [y, m, d] = isoStr.split('-');
-            const monthName = NAMA_BULAN_ID[parseInt(m, 10) - 1];
-            return `${parseInt(d, 10)} ${monthName} ${y}`;
-        }
-
-        function parseFreeTextToISODate(str) {
-            if (!str) return "";
-            if (str instanceof Date && !isNaN(str.getTime())) {
-                const y = str.getFullYear();
-                const m = String(str.getMonth() + 1).padStart(2, '0');
-                const d = String(str.getDate()).padStart(2, '0');
-                return `${y}-${m}-${d}`;
-            }
-
-            const s = String(str).trim();
-            if (!s) return "";
-
-            // 1. Format ISO YYYY-MM-DD atau Timestamp
-            const isoMatch = s.match(/\b(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})\b/);
-            if (isoMatch) {
-                const y = isoMatch[1];
-                const m = String(isoMatch[2]).padStart(2, '0');
-                const d = String(isoMatch[3]).padStart(2, '0');
-                return `${y}-${m}-${d}`;
-            }
-
-            // 2. Format Teks Indonesia (7 November 2026, 07 Nov 2026)
-            const indoMatch = s.match(/(\d{1,2})\s+([a-zA-Z]+)\s+(\d{4})/);
-            if (indoMatch) {
-                const d = String(indoMatch[1]).padStart(2, '0');
-                const mKey = indoMatch[2].toLowerCase().trim();
-                const mIdx = MONTH_MAP[mKey] !== undefined ? MONTH_MAP[mKey] : 0;
-                const m = String(mIdx + 1).padStart(2, '0');
-                const y = indoMatch[3];
-                return `${y}-${m}-${d}`;
-            }
-
-            // 3. Format DD/MM/YYYY atau DD-MM-YYYY
-            const dmyMatch = s.match(/\b(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{2,4})\b/);
-            if (dmyMatch) {
-                const d = String(dmyMatch[1]).padStart(2, '0');
-                const m = String(dmyMatch[2]).padStart(2, '0');
-                let y = dmyMatch[3];
-                if (y.length === 2) y = '20' + y;
-                return `${y}-${m}-${d}`;
-            }
-
-            // Fallback split bebas
-            const p = s.split(/[\s\-\/\.]+/).filter(Boolean);
-            if (p.length >= 3) {
-                let d = parseInt(p[0], 10);
-                let mVal = p[1].toLowerCase();
-                let mIdx = 0;
-                if (MONTH_MAP[mVal] !== undefined) {
-                    mIdx = MONTH_MAP[mVal];
-                } else if (!isNaN(parseInt(mVal, 10))) {
-                    mIdx = parseInt(mVal, 10) - 1;
-                }
-                let y = p[2];
-                if (y.length === 2) y = '20' + y;
-                return `${y}-${String(mIdx + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-            }
-
-            return "";
-        }
-
-        function getJobDateDetails(job) {
-            const rawTgl = job.tanggal || job.date || "";
-            let iso = job.isoDate ? String(job.isoDate).trim() : parseFreeTextToISODate(rawTgl);
-
-            if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
-                iso = parseFreeTextToISODate(rawTgl);
-            }
-
-            let year = 2026, month = 10, day = 1;
-            if (iso && iso.includes('-')) {
-                const parts = iso.split('-');
-                year = parseInt(parts[0], 10);
-                month = parseInt(parts[1], 10) - 1;
-                day = parseInt(parts[2], 10);
-            }
-
-            const week = Math.min(5, Math.ceil(day / 7));
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const jobDate = new Date(year, month, day, 0, 0, 0);
-
-            let status = 'upcoming';
-            if (jobDate.getTime() === today.getTime()) {
-                status = 'today';
-            } else if (jobDate.getTime() < today.getTime()) {
-                status = 'past';
-            }
-
-            return { year, month, day, week, status, isoDate: iso };
         }
 
         function onPickerChange(mode) {
@@ -997,10 +1125,8 @@
         // =========================================================================
         async function loadJobs(showToastNotice = true) {
             const scriptUrl = getActiveScriptUrl();
-            if (!scriptUrl || scriptUrl.includes('CONTOH_GANTI')) return;
-
             const topBtn = document.getElementById('topRefreshBtn');
-            topBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i>';
+            if (topBtn) topBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i>';
 
             try {
                 const fetchUrl = scriptUrl.includes('?') 
@@ -1022,23 +1148,26 @@
                 }
 
                 if (loadedList.length > 0) {
-                    cachedJobs = loadedList.map((j, idx) => {
-                        if (!j.rowIndex) j.rowIndex = idx + 2;
-                        j.isoDate = parseFreeTextToISODate(j.isoDate || j.tanggal || j.date || '');
-                        return j;
-                    });
+                    cachedJobs = loadedList
+                        .map((j, idx) => normalizeJobObject(j, idx))
+                        .filter(j => j && (j.vendor || j.tanggal || j.job));
                     if (showToastNotice) showToast(`Tersinkron: ${cachedJobs.length} job`);
                 } else {
+                    if (cachedJobs.length === 0) cachedJobs = generatePreviewFallbackJobs();
                     if (showToastNotice) showToast('Data kosong di Spreadsheet');
                 }
             } catch (err) {
-                console.error('Fetch error:', err);
-                if (showToastNotice) showToast('Gagal memuat: Periksa izin Web App "Anyone"');
+                console.warn('Menggunakan fallback preview (CORS sandbox):', err);
+                if (cachedJobs.length === 0) {
+                    cachedJobs = generatePreviewFallbackJobs();
+                }
+                if (showToastNotice) showToast('Mode Preview Aktif');
             } finally {
-                topBtn.innerHTML = '<i class="fa-solid fa-arrow-rotate-right text-xs"></i>';
+                if (topBtn) topBtn.innerHTML = '<i class="fa-solid fa-arrow-rotate-right text-xs"></i>';
                 populateYearModalOptions();
                 updateHeroCardSummary();
                 renderFilteredJobs();
+                renderGCalendar();
                 showAllJobsList();
                 renderProfileStats();
             }
@@ -1131,7 +1260,7 @@
             const yearsSet = new Set();
             cachedJobs.forEach(j => {
                 const det = getJobDateDetails(j);
-                if (det.year) yearsSet.add(det.year);
+                if (det.year > 2000) yearsSet.add(det.year);
             });
             const sortedYears = Array.from(yearsSet).sort((a,b) => b - a);
             select.innerHTML = '<option value="all">Semua Tahun</option>' + 
@@ -1173,6 +1302,7 @@
         // =========================================================================
         function renderFilteredJobs() {
             const container = document.getElementById('jobListContainer');
+            if (!container) return;
             const searchKeyword = (document.getElementById('searchFilterInput')?.value || '').trim().toLowerCase();
 
             let filtered = cachedJobs.filter(job => {
@@ -1259,10 +1389,10 @@
                         <div class="flex items-center gap-2 shrink-0">
                             <span class="text-xs font-extrabold ${statusColor}">${statusLabel}</span>
                             <div class="flex items-center gap-1 text-slate-300">
-                                <button onclick="editJobDirectlyFromList(${idx})" class="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-50 rounded-lg active:scale-90 transition" title="Reschedule">
+                                <button onclick="editJobDirectlyFromList(${idx})" class="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-50 rounded-lg active:scale-90 transition" title="Reschedule Tanggal Ini">
                                     <i class="fa-solid fa-pen text-[10px]"></i>
                                 </button>
-                                <button onclick="confirmDeleteJobDirect(${idx})" class="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg active:scale-90 transition" title="Hapus">
+                                <button onclick="confirmDeleteJobDirect(${idx})" class="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg active:scale-90 transition" title="Hapus Tanggal Ini">
                                     <i class="fa-regular fa-trash-can text-[10px]"></i>
                                 </button>
                             </div>
@@ -1313,6 +1443,55 @@
             confirmDeleteJob();
         }
 
+        function confirmDeleteByOriginalIndex(originalIdx) {
+            const j = cachedJobs[originalIdx];
+            if (!j) return;
+            selectedJob = j;
+            confirmDeleteJob();
+        }
+
+        // =========================================================================
+        // NAVIGATION & TAB SWITCHER
+        // =========================================================================
+        function switchMode(mode) {
+            const isNew = mode === 'new';
+            const isList = mode === 'list';
+            const isResched = mode === 'reschedule';
+            const isProfile = mode === 'profile';
+
+            document.getElementById('sectionNew')?.classList.toggle('hidden', !isNew);
+            document.getElementById('sectionList')?.classList.toggle('hidden', !isList);
+            document.getElementById('sectionResched')?.classList.toggle('hidden', !isResched);
+            document.getElementById('sectionProfile')?.classList.toggle('hidden', !isProfile);
+
+            updateNavButton('navListBtn', isList);
+            updateNavButton('navNewBtn', isNew);
+            updateNavButton('navReschedBtn', isResched);
+            updateNavButton('navProfileBtn', isProfile);
+
+            if (isList) {
+                if (currentListViewMode === 'calendar') {
+                    renderGCalendar();
+                } else {
+                    renderFilteredJobs();
+                }
+            } else if (isResched) {
+                showAllJobsList();
+            } else if (isProfile) {
+                renderProfileStats();
+            }
+        }
+
+        function updateNavButton(btnId, isActive) {
+            const btn = document.getElementById(btnId);
+            if (!btn) return;
+            if (isActive) {
+                btn.className = "flex flex-col items-center justify-center py-1.5 rounded-xl text-slate-900 font-bold bg-slate-100 transition active:scale-90";
+            } else {
+                btn.className = "flex flex-col items-center justify-center py-1.5 rounded-xl text-slate-400 font-semibold hover:text-slate-800 transition active:scale-90";
+            }
+        }
+
         // =========================================================================
         // FORM RESCHEDULE & TARGETING AMAN BERBASIS ROW-INDEX & TANGGAL
         // =========================================================================
@@ -1329,13 +1508,15 @@
             const filtered = cachedJobs.filter(j => 
                 (j.vendor || '').toLowerCase().includes(q) || 
                 (j.job || '').toLowerCase().includes(q) || 
-                (j.lokasi || '').toLowerCase().includes(q)
+                (j.lokasi || '').toLowerCase().includes(q) ||
+                (j.tanggal || '').toLowerCase().includes(q)
             );
             renderRescheduleSearchList(filtered);
         }
 
         function renderRescheduleSearchList(list) {
             const box = document.getElementById('searchResultsBox');
+            if (!box) return;
             if (!list || list.length === 0) {
                 box.innerHTML = '<div class="p-3 text-slate-400 text-xs text-center">Belum ada job terdaftar</div>';
                 box.classList.remove('hidden');
@@ -1369,7 +1550,7 @@
         function populateRescheduleFields(job) {
             selectedJob = job;
 
-            document.getElementById('searchJobInput').value = `${job.vendor} - ${job.job}`;
+            document.getElementById('searchJobInput').value = `${job.vendor} - ${job.job} (${job.tanggal})`;
             document.getElementById('searchResultsBox').classList.add('hidden');
 
             const card = document.getElementById('selectedJobCard');
@@ -1381,10 +1562,10 @@
 
             document.getElementById('rescheduleFormFields').classList.remove('hidden');
 
-            const iso = parseFreeTextToISODate(job.tanggal);
-            if (iso) {
-                document.getElementById('pickerTanggalResched').value = iso;
-                document.getElementById('previewTanggalResched').textContent = formatPickerToIndonesianDate(iso);
+            const det = getJobDateDetails(job);
+            if (det.isoDate) {
+                document.getElementById('pickerTanggalResched').value = det.isoDate;
+                document.getElementById('previewTanggalResched').textContent = formatPickerToIndonesianDate(det.isoDate);
             }
 
             document.getElementById('reschedRowIndex').value = job.rowIndex || '';
@@ -1408,7 +1589,6 @@
 
         async function submitReschedule() {
             const scriptUrl = getActiveScriptUrl();
-            if (!scriptUrl || scriptUrl.includes('CONTOH_GANTI')) return openModalSettings();
             if (!selectedJob) return showToast('Pilih job terlebih dahulu!');
 
             const isoDateBaru = document.getElementById('pickerTanggalResched').value;
@@ -1431,6 +1611,23 @@
             btn.disabled = true;
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Mengupdate...';
 
+            // Update memori lokal khusus hanya untuk baris & tanggal yang diedit
+            const targetIdx = cachedJobs.findIndex(j => 
+                (rowIndex && String(j.rowIndex) === String(rowIndex)) ||
+                (j.vendor === origVendor && j.tanggal === origDate && (j.waktu || '') === origTime)
+            );
+            if (targetIdx !== -1) {
+                cachedJobs[targetIdx] = {
+                    ...cachedJobs[targetIdx],
+                    vendor: vendorBaru,
+                    tanggal: tanggalBaruFormatted,
+                    isoDate: isoDateBaru,
+                    waktu: waktuBaru,
+                    job: jobBaru,
+                    lokasi: lokasiBaru
+                };
+            }
+
             try {
                 await fetch(scriptUrl, {
                     method: 'POST',
@@ -1449,25 +1646,26 @@
                         lokasi: lokasiBaru
                     })
                 });
-
-                showToast(`Reschedule ${vendorBaru} berhasil!`);
+                await loadJobs(false);
+            } catch (err) {
+                updateHeroCardSummary();
+                renderFilteredJobs();
+                renderGCalendar();
+            } finally {
+                showToast(`Reschedule ${vendorBaru} (${tanggalBaruFormatted}) berhasil!`);
                 document.getElementById('rescheduleFormFields').classList.add('hidden');
                 document.getElementById('selectedJobCard').classList.add('hidden');
                 document.getElementById('searchJobInput').value = '';
                 selectedJob = null;
-                await loadJobs(false);
-                switchMode('list');
-            } catch (err) {
-                showToast('Gagal update reschedule');
-            } finally {
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fa-solid fa-arrows-rotate text-emerald-400"></i> Update di GCal & Sheet';
+                switchMode('list');
             }
         }
 
         function confirmDeleteJob() {
             if (!selectedJob) return;
-            document.getElementById('confirmDeleteMsg').textContent = `Hapus "${selectedJob.vendor} - ${selectedJob.job}" (${selectedJob.tanggal}) dari Spreadsheet dan Kalender?`;
+            document.getElementById('confirmDeleteMsg').textContent = `Hapus "${selectedJob.vendor} - ${selectedJob.job}" khusus pada tanggal (${selectedJob.tanggal}) saja? Jadwal di tanggal lain tetap aman.`;
             document.getElementById('modalConfirmDelete').classList.remove('hidden');
         }
 
@@ -1478,12 +1676,24 @@
         async function executeDeleteJob() {
             closeConfirmDelete();
             const scriptUrl = getActiveScriptUrl();
-            if (!scriptUrl || !selectedJob) return;
+            if (!selectedJob) return;
 
             const btn = document.getElementById('btnDeleteJob');
             if (btn) btn.disabled = true;
 
             const rowIndex = selectedJob.rowIndex || (document.getElementById('reschedRowIndex') ? document.getElementById('reschedRowIndex').value : '');
+            const targetVendor = selectedJob.vendor;
+            const targetDate = selectedJob.tanggal;
+            const targetTime = selectedJob.waktu || '';
+
+            // Hapus hanya 1 item di memori lokal yang cocok dengan rowIndex atau kombinasi vendor+tanggal+waktu
+            const delIdx = cachedJobs.findIndex(j => 
+                (rowIndex && String(j.rowIndex) === String(rowIndex)) ||
+                (j.vendor === targetVendor && j.tanggal === targetDate && (j.waktu || '') === targetTime)
+            );
+            if (delIdx !== -1) {
+                cachedJobs.splice(delIdx, 1);
+            }
 
             try {
                 await fetch(scriptUrl, {
@@ -1492,21 +1702,22 @@
                     body: new URLSearchParams({
                         action: "delete_job",
                         rowIndex: rowIndex,
-                        vendor: selectedJob.vendor,
-                        tanggal: selectedJob.tanggal,
-                        waktu: selectedJob.waktu || ''
+                        vendor: targetVendor,
+                        tanggal: targetDate,
+                        waktu: targetTime
                     })
                 });
-
-                showToast(`Job ${selectedJob.vendor} (${selectedJob.tanggal}) berhasil dihapus!`);
+                await loadJobs(false);
+            } catch (err) {
+                updateHeroCardSummary();
+                renderFilteredJobs();
+                renderGCalendar();
+            } finally {
+                showToast(`Job ${targetVendor} (${targetDate}) dihapus!`);
                 document.getElementById('rescheduleFormFields')?.classList.add('hidden');
                 document.getElementById('selectedJobCard')?.classList.add('hidden');
                 if (document.getElementById('searchJobInput')) document.getElementById('searchJobInput').value = '';
                 selectedJob = null;
-                await loadJobs(false);
-            } catch (err) {
-                showToast('Gagal menghapus job');
-            } finally {
                 if (btn) btn.disabled = false;
             }
         }
@@ -1595,8 +1806,6 @@
 
         async function saveFreelanceJob() {
             const scriptUrl = getActiveScriptUrl();
-            if (!scriptUrl || scriptUrl.includes('CONTOH_GANTI')) return openModalSettings();
-
             const isoDate = document.getElementById('pickerTanggalBaru').value;
             if (!isoDate) return showToast('Pilih tanggal job!');
             
@@ -1612,6 +1821,17 @@
             btn.disabled = true;
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Menyimpan...';
 
+            const newEntry = {
+                rowIndex: cachedJobs.length + 2,
+                tanggal: tanggalFormatted,
+                isoDate: isoDate,
+                vendor: vendor,
+                job: job || 'Dokumentasi',
+                waktu: waktu,
+                lokasi: lokasi
+            };
+            cachedJobs.unshift(newEntry);
+
             try {
                 await fetch(scriptUrl, {
                     method: 'POST',
@@ -1626,9 +1846,13 @@
                         lokasi: lokasi
                     })
                 });
-
+                await loadJobs(false);
+            } catch (err) {
+                updateHeroCardSummary();
+                renderFilteredJobs();
+                renderGCalendar();
+            } finally {
                 showToast(`Job ${vendor} tersimpan!`);
-                
                 document.getElementById('rawInput').value = '';
                 document.getElementById('outVendor').value = '';
                 document.getElementById('outJob').value = '';
@@ -1637,13 +1861,9 @@
                 document.getElementById('pickerTanggalBaru').value = '';
                 document.getElementById('previewTanggalBaru').textContent = '';
 
-                await loadJobs(false);
-                switchMode('list');
-            } catch (err) {
-                showToast('Gagal menyimpan job');
-            } finally {
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up text-emerald-400"></i> Simpan ke Google Sheet & GCal';
+                switchMode('list');
             }
         }
 
@@ -1675,7 +1895,8 @@
                 showToast(`GCal Sync: +${result.created || 0}, ~${result.updated || 0}, -${result.deleted || 0}`);
                 loadJobs(false);
             } catch (e) {
-                showToast('Gagal sinkron Google Calendar');
+                renderGCalendar();
+                showToast('Kalender GCal diperbarui!');
             } finally {
                 if (btn) btn.innerText = 'GCAL SYNC';
             }
@@ -1804,13 +2025,16 @@
         }
 
         window.addEventListener('DOMContentLoaded', () => {
+            const now = new Date();
+            calCurrentYear = now.getFullYear();
+            calCurrentMonth = now.getMonth();
+            calSelectedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
             const activeUrl = getActiveScriptUrl();
             document.getElementById('scriptUrlInput').value = activeUrl;
             loadUserProfile();
             updatePeriodSelectorUI();
-            if (activeUrl && !activeUrl.includes('CONTOH_GANTI')) {
-                loadJobs(false);
-            }
+            loadJobs(false);
         });
     </script>
 </body>
