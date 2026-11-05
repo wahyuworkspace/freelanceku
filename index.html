@@ -124,7 +124,7 @@
                 </div>
             </div>
 
-            <!-- Indikator Dua Kolom (Ikon FontAwesome 6 Valid) -->
+            <!-- Indikator Dua Kolom -->
             <div class="grid grid-cols-2 gap-2.5 pt-1">
                 <div class="bg-slate-800/60 border border-slate-700/50 p-2.5 rounded-xl flex items-center gap-2">
                     <div class="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs">
@@ -431,7 +431,6 @@
                 </button>
             </div>
 
-            <!-- Panel Diagnostik Pembacaan Tanggal Spreadsheet -->
             <div class="bg-white p-4 rounded-[24px] border border-slate-200/90 shadow-sm space-y-1.5 text-[11px]">
                 <div class="font-bold text-slate-800 flex items-center justify-between">
                     <span>Status Parser Tanggal GCal</span>
@@ -660,14 +659,13 @@
         // Calendar View State
         let currentListViewMode = 'list';
         let calCurrentYear = 2026;
-        let calCurrentMonth = 10; // Default November 2026
+        let calCurrentMonth = 10;
         let calSelectedDate = '2026-11-05';
 
         function getActiveScriptUrl() {
             return localStorage.getItem('freelance_script_url') || DEFAULT_SCRIPT_URL;
         }
 
-        // Generator Data Fallback Realistis (Jika Preview Diblokir Sandbox CORS)
         function generatePreviewFallbackJobs() {
             const list = [
                 { rowIndex: 2, tanggal: "5 November 2026", vendor: "Luxuraimage Studio", job: "Video Wedding", waktu: "07.00 - 14.00", lokasi: "Royal Ambarrukmo", isoDate: "2026-11-05" },
@@ -710,12 +708,11 @@
         }
 
         // =========================================================================
-        // DEEP DATE SCANNER & NORMALIZER (MENDUKUNG ARRAY MAUPUN OBJEK DARI SHEET)
+        // DEEP DATE SCANNER & NORMALIZER ANTI TERTUKAR KOLOM
         // =========================================================================
         function normalizeJobObject(raw, idx) {
             if (!raw) return null;
 
-            // Jika Apps Script mengembalikan baris sebagai Array [tanggal, vendor, job, waktu, lokasi]
             if (Array.isArray(raw)) {
                 const objFromArr = {
                     rowIndex: idx + 2,
@@ -731,7 +728,6 @@
 
             if (typeof raw !== 'object') return null;
 
-            // Cari key secara case-insensitive
             let vendor = "", jobTitle = "", waktu = "", lokasi = "", rawTanggal = "";
             for (const k in raw) {
                 const lowerK = k.toLowerCase().trim();
@@ -749,7 +745,6 @@
                 }
             }
 
-            // Fallback jika nama key berbeda
             const vals = Object.values(raw);
             if (!rawTanggal && vals.length >= 1) rawTanggal = raw.tanggal || raw.date || vals[0] || "";
             if (!vendor && vals.length >= 2) vendor = raw.vendor || vals[1] || "";
@@ -806,7 +801,6 @@
                 return `${str.getFullYear()}-${String(str.getMonth() + 1).padStart(2, '0')}-${String(str.getDate()).padStart(2, '0')}`;
             }
 
-            // Jika berupa angka serial tanggal Google Sheets (misal 46333)
             if (typeof str === 'number' && str > 40000 && str < 60000) {
                 const excelEpoch = new Date(Date.UTC(1899, 11, 30));
                 const dObj = new Date(excelEpoch.getTime() + str * 86400000);
@@ -819,7 +813,6 @@
 
             if (!s) return "";
 
-            // 1. Format ISO Timestamp dari Google Sheets (Konversi ke WIB / GMT+7 agar tanggal tidak mundur 1 hari)
             if (s.includes('T') && /\d{4}-\d{2}-\d{2}T/.test(s)) {
                 const dObj = new Date(s);
                 if (!isNaN(dObj.getTime())) {
@@ -828,7 +821,6 @@
                 }
             }
 
-            // 2. Format ISO YYYY-MM-DD
             const isoMatch = s.match(/\b(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})\b/);
             if (isoMatch) {
                 const y = isoMatch[1];
@@ -837,7 +829,6 @@
                 return `${y}-${m}-${d}`;
             }
 
-            // 3. Format Teks Bulan Indonesia / Inggris (Contoh: "7 November 2026", "07 Nov 26", "7-Nov-2026", "7 November")
             const monthNamesPattern = Object.keys(MONTH_MAP).join('|');
             const regexIndo1 = new RegExp(`(\\d{1,2})\\s*[\\-\\/\\.,\\s]*\\s*(${monthNamesPattern})\\b(?:\\s*[\\-\\/\\.,\\s]*\\s*(\\d{2,4}))?`, 'i');
             const m1 = s.match(regexIndo1);
@@ -851,7 +842,6 @@
                 return `${year}-${month}-${day}`;
             }
 
-            // Pola: "November 7, 2026"
             const regexIndo2 = new RegExp(`\\b(${monthNamesPattern})\\s*[\\-\\/\\.,\\s]*\\s*(\\d{1,2})(?:\\s*[,\\-\\/\\s]+\\s*(\\d{2,4}))?`, 'i');
             const m2 = s.match(regexIndo2);
             if (m2) {
@@ -864,7 +854,6 @@
                 return `${year}-${month}-${day}`;
             }
 
-            // 4. Format Angka DD/MM/YYYY atau DD-MM-YYYY
             const dmyMatch = s.match(/\b(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{2,4})\b/);
             if (dmyMatch) {
                 const p1 = parseInt(dmyMatch[1], 10);
@@ -982,7 +971,6 @@
             });
             if (hasInCurrentMonth) return;
 
-            // Cari jadwal mendatang terdekat, atau jadwal terbaru jika semua lampau
             const validDates = cachedJobs
                 .map(j => getJobDateDetails(j).isoDate)
                 .filter(iso => iso && /^\d{4}-\d{2}-\d{2}$/.test(iso))
@@ -1165,16 +1153,6 @@
             if (isoDate) {
                 document.getElementById('pickerTanggalBaru').value = isoDate;
                 document.getElementById('previewTanggalBaru').textContent = formatPickerToIndonesianDate(isoDate);
-            }
-        }
-
-        function onPickerChange(mode) {
-            if (mode === 'new') {
-                const val = document.getElementById('pickerTanggalBaru').value;
-                document.getElementById('previewTanggalBaru').textContent = formatPickerToIndonesianDate(val);
-            } else {
-                const val = document.getElementById('pickerTanggalResched').value;
-                document.getElementById('previewTanggalResched').textContent = formatPickerToIndonesianDate(val);
             }
         }
 
@@ -1564,7 +1542,7 @@
         }
 
         // =========================================================================
-        // FORM RESCHEDULE & TARGETING AMAN BERBASIS ROW-INDEX & TANGGAL
+        // FORM RESCHEDULE & PEMETAAN TEPAT TANPA TERTUKAR
         // =========================================================================
         function showAllJobsList() {
             renderRescheduleSearchList(cachedJobs);
@@ -1621,14 +1599,14 @@
         function populateRescheduleFields(job) {
             selectedJob = job;
 
-            document.getElementById('searchJobInput').value = `${job.vendor} - ${job.job} (${job.tanggal})`;
+            document.getElementById('searchJobInput').value = `${job.vendor || ''} - ${job.job || ''} (${job.tanggal || ''})`;
             document.getElementById('searchResultsBox').classList.add('hidden');
 
             const card = document.getElementById('selectedJobCard');
             card.classList.remove('hidden');
-            document.getElementById('cardVendor').textContent = job.vendor;
-            document.getElementById('cardJob').textContent = job.job;
-            document.getElementById('cardWaktu').textContent = `${job.tanggal} (${job.waktu || 'Waktu Sesi'})`;
+            document.getElementById('cardVendor').textContent = job.vendor || '-';
+            document.getElementById('cardJob').textContent = job.job || '-';
+            document.getElementById('cardWaktu').textContent = `${job.tanggal || '-'} (${job.waktu || 'Waktu Sesi'})`;
             document.getElementById('cardLokasi').textContent = job.lokasi || '-';
 
             document.getElementById('rescheduleFormFields').classList.remove('hidden');
@@ -1639,12 +1617,14 @@
                 document.getElementById('previewTanggalResched').textContent = formatPickerToIndonesianDate(det.isoDate);
             }
 
+            // SIMPAN KE INPUT HIDDEN UNTUK PENGUNCI AMAN
             document.getElementById('reschedRowIndex').value = job.rowIndex || '';
             document.getElementById('reschedOriginalVendor').value = job.vendor || '';
             document.getElementById('reschedOriginalDate').value = job.tanggal || '';
             document.getElementById('reschedOriginalTime').value = job.waktu || '';
 
-            document.getElementById('reschedVendorName').value = job.vendor;
+            // MAP KE INPUT MASING-MASING SECARA EKSPLISIT (TIDAK AKAN TERTUKAR)
+            document.getElementById('reschedVendorName').value = job.vendor || '';
             document.getElementById('reschedWaktu').value = job.waktu || '';
             document.getElementById('reschedJobTitle').value = job.job || '';
             document.getElementById('reschedLokasi').value = job.lokasi || '';
